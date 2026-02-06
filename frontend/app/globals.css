@@ -1,0 +1,228 @@
+@import "tailwindcss";
+
+:root {
+  /* Primary Colors */
+  --pr_dg: #032c1e;
+  --pr_lg: #59df78;
+  --pr_y: #fff364;
+  --pr_w: #fefff3;
+  --pr_dr: #b91c1c;
+
+  /* Secondary Colors */
+  --sr_dg: #0e3c36;
+  --sr_lg: #6ef0a5;
+  --sr_w: #f3eed9;
+  --sr_g: #4a5855;
+
+  /* Gradients */
+  --gy-gradient: linear-gradient(90deg, #d7d74b 0%, #91db64 55%, #4cd680 100%);
+  --gw-gradient: linear-gradient(90deg, #6ef0a5 0%, #dffffa 100%);
+}
+
+@theme inline {
+  /* Primary Colors */
+  --color-pr_dg: var(--pr_dg);
+  --color-pr_lg: var(--pr_lg);
+  --color-pr_y: var(--pr_y);
+  --color-pr_w: var(--pr_w);
+  --color-pr_dr: var(--pr_dr);
+
+  /* Secondary Colors */
+  --color-sr_dg: var(--sr_dg);
+  --color-sr_lg: var(--sr_lg);
+  --color-sr_w: var(--sr_w);
+  --color-sr_g: var(--sr_g);
+
+  /* Gradients */
+  --bg-gy-gradient: var(--gy-gradient);
+  --bg-gw-gradient: var(--gw-gradient);
+}
+
+/* Typography scale */
+.display-hero {
+  font-size: clamp(3rem, 10vw, 8.5rem);
+  line-height: 1.3;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.display-xxl {
+  font-size: clamp(2.5rem, 8vw, 7.281rem);
+  line-height: 1.3;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.display-xl {
+  font-size: clamp(1.75rem, 4.2vw, 3.5rem);
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.display-lg {
+  font-size: clamp(1.5rem, 2.8vw, 2.25rem);
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.display-md {
+  font-size: clamp(1.125rem, 1.8vw, 1.5rem);
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.display-md_bold {
+  font-size: clamp(1.125rem, 1.8vw, 1.5rem);
+  line-height: 1.3;
+  font-weight: 800;
+}
+
+.display-md_thin {
+  font-size: clamp(0.95rem, 1.15vw, 1rem);
+  line-height: 1.3;
+  font-weight: 400;
+}
+
+.display-sm {
+  font-size: clamp(0.8125rem, 0.95vw, 0.875rem);
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.display-xs {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  font-weight: 500;
+}
+
+.text-gy-gradient {
+  background-image: var(--gy-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.text-gw-gradient {
+  background-image: var(--gw-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.display-xxs {
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--pr_dg);
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family:
+    var(--font-nunito),
+    var(--font-gilroy),
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.text-ag-16 {
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.text-ag-14 {
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+
+.text-ag-12 {
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.btn-text {
+  font-size: clamp(0.875rem, 1.1vw, 1rem);
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.nav-text {
+  font-size: clamp(0.875rem, 1.1vw, 1.125rem);
+  line-height: 1.3;
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-menu-enter,
+  .mobile-menu-exit {
+    animation: none !important;
+  }
+}
+
+@keyframes mobileMenuEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mobileMenuExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.mobile-menu-enter {
+  animation: mobileMenuEnter 220ms ease-out forwards;
+}
+
+.mobile-menu-exit {
+  animation: mobileMenuExit 180ms ease-in forwards;
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .app-shell {
+    max-width: 1024px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    max-width: 768px;
+  }
+}
+
+@media (max-width: 390px) {
+  .app-shell {
+    max-width: 390px;
+  }
+}
