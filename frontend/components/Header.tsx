@@ -4,6 +4,7 @@ import Logo from "@/components/ui/Logo";
 import { SectionSlider } from "@/components/navigation/SectionSlider";
 import { SectionTab } from "@/types/navigation";
 import { Menu, X, ShoppingCart, User } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 const tabs: SectionTab[] = [
@@ -51,13 +52,13 @@ const Header = () => {
               onChange={handleTabClick}
             />
             <div className="flex items-center gap-3">
-              <button
-                type="button"
+              <Link
+                href="/user_profile/orders"
                 className="flex h-12 w-20 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
-                aria-label="Open cart"
+                aria-label="Open orders"
               >
                 <ShoppingCart className="h-5 w-5" />
-              </button>
+              </Link>
               <button
                 type="button"
                 className="flex h-12 w-20 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
@@ -123,14 +124,14 @@ const Header = () => {
               />
             </div>
             <div className="flex items-center gap-3 py-4">
-              <button
-                type="button"
+              <Link
+                href="/user_profile/orders"
                 className="flex h-12 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
-                aria-label="Open cart"
+                aria-label="Open orders"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <ShoppingCart className="h-5 w-5" />
-              </button>
+              </Link>
               <button
                 type="button"
                 className="flex h-12 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"

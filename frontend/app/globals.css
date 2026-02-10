@@ -139,6 +139,12 @@ body {
   overflow-x: hidden;
 }
 
+button,
+[role="button"],
+a {
+  cursor: pointer;
+}
+
 .text-ag-16 {
   font-size: 1rem;
   line-height: 1.3;

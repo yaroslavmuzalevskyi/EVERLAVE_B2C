@@ -39,7 +39,7 @@ const categories = [
 
 export default function Categories() {
   return (
-    <section className="w-full px-4 pb-16 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]">
+    <section className="w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="text-3xl font-semibold text-pr_w">Categories</h2>

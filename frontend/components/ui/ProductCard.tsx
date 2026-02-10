@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
@@ -8,18 +9,22 @@ type NewProductCardProps = {
   isNew?: boolean;
   badgeLabel?: string;
   badgeClassName?: string;
+  href?: string;
+  showButton?: boolean;
 };
 
-export default function NewProductCard({
+export default function ProductCard({
   title,
   description,
   price,
   isNew = true,
   badgeLabel = "New!",
   badgeClassName = "bg-pr_y text-pr_dg",
+  href,
+  showButton = true,
 }: NewProductCardProps) {
-  return (
-    <div className="flex h-full flex-col">
+  const content = (
+    <>
       <div className="relative rounded-2xl bg-sr_w p-4">
         {isNew && (
           <span
@@ -38,10 +43,24 @@ export default function NewProductCard({
         <h3 className="text-base font-semibold text-pr_w">{title}</h3>
         <p className="mt-1 text-sm text-pr_w/70 line-clamp-2">{description}</p>
         <p className="mt-2 text-lg font-semibold text-pr_w">{price}</p>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="flex h-full flex-col">
+      {href ? (
+        <Link href={href} className="flex flex-1 flex-col">
+          {content}
+        </Link>
+      ) : (
+        content
+      )}
+      {showButton && (
         <Button variant="category" className="mt-3 w-full">
           Add to Cart +
         </Button>
-      </div>
+      )}
     </div>
   );
 }

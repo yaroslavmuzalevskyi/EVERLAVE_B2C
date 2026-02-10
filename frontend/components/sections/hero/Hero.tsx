@@ -1,11 +1,12 @@
 import Image from "next/image";
 import Card from "@/components/ui/Card";
+import Link from "next/link";
 
 export default function Hero() {
   return (
     <section
       id="home"
-      className="w-full px-4 pb-16 pt-12 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]"
+      className="w-full px-4 pt-12 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]"
     >
       <Card
         width="100%"
@@ -28,12 +29,12 @@ export default function Hero() {
             Stable and repeatable performance with tested yields, resilience,
             and predictable results.
           </p>
-          <button
-            type="button"
+          <Link
+            href="/seeds"
             className="mt-3 inline-flex items-center justify-center rounded-full bg-pr_dg px-6 py-3 text-sm font-semibold text-pr_w transition hover:bg-sr_dg"
           >
             Explore Now!
-          </button>
+          </Link>
         </div>
       </Card>
     </section>
