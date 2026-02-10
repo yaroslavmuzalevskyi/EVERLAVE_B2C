@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Logo from "@/components/ui/Logo";
 import { SectionSlider } from "@/components/navigation/SectionSlider";
 import { SectionTab } from "@/types/navigation";
 import { Menu, X, ShoppingCart, User } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const tabs: SectionTab[] = [
   { id: "home", label: "Home" },
@@ -19,6 +20,7 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuMounted, setMobileMenuMounted] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
+  const { isAuthenticated } = useAuth();
 
   const handleTabClick = (tab: SectionTab) => {
     setActiveSection(tab.id);
@@ -39,6 +41,20 @@ const Header = () => {
     if (mobileMenuOpen) setMobileMenuMounted(true);
   }, [mobileMenuOpen]);
 
+  const { cartHref, profileHref } = useMemo(() => {
+    if (isAuthenticated) {
+      return {
+        cartHref: "/cart",
+        profileHref: "/user_profile/profile",
+      };
+    }
+
+    return {
+      cartHref: "/signin?next=/cart",
+      profileHref: "/signin?next=/user_profile/profile",
+    };
+  }, [isAuthenticated]);
+
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-pr_dg/90 backdrop-blur">
@@ -53,19 +69,19 @@ const Header = () => {
             />
             <div className="flex items-center gap-3">
               <Link
-                href="/user_profile/orders"
+                href={cartHref}
                 className="flex h-12 w-20 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
-                aria-label="Open orders"
+                aria-label="Open cart"
               >
                 <ShoppingCart className="h-5 w-5" />
               </Link>
-              <button
-                type="button"
+              <Link
+                href={profileHref}
                 className="flex h-12 w-20 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
                 aria-label="Open account"
               >
                 <User className="h-5 w-5" />
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -125,21 +141,21 @@ const Header = () => {
             </div>
             <div className="flex items-center gap-3 py-4">
               <Link
-                href="/user_profile/orders"
+                href={cartHref}
                 className="flex h-12 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
-                aria-label="Open orders"
+                aria-label="Open cart"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <ShoppingCart className="h-5 w-5" />
               </Link>
-              <button
-                type="button"
+              <Link
+                href={profileHref}
                 className="flex h-12 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
                 aria-label="Open account"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <User className="h-5 w-5" />
-              </button>
+              </Link>
             </div>
           </div>
         </div>

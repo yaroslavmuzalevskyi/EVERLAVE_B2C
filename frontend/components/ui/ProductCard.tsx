@@ -11,6 +11,7 @@ type NewProductCardProps = {
   badgeClassName?: string;
   href?: string;
   showButton?: boolean;
+  imageUrl?: string;
 };
 
 export default function ProductCard({
@@ -22,6 +23,7 @@ export default function ProductCard({
   badgeClassName = "bg-pr_y text-pr_dg",
   href,
   showButton = true,
+  imageUrl,
 }: NewProductCardProps) {
   const content = (
     <>
@@ -36,7 +38,15 @@ export default function ProductCard({
             {badgeLabel}
           </span>
         )}
-        <div className="h-[400px] rounded-xl bg-pr_w/60" />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={title}
+            className="h-[400px] w-full rounded-xl object-cover"
+          />
+        ) : (
+          <div className="h-[400px] rounded-xl bg-pr_w/60" />
+        )}
       </div>
 
       <div className="mt-4 flex flex-1 flex-col">

@@ -1,8 +1,16 @@
 import Button from "@/components/ui/Button";
 import Link from "next/link";
 import ProductCard from "@/components/ui/ProductCard";
+import { fetchProducts, formatPrice } from "@/services/products";
 
-const products = [
+type ProductCardItem = {
+  title: string;
+  description: string;
+  price: string;
+  imageUrl?: string;
+};
+
+const fallbackProducts: ProductCardItem[] = [
   {
     title: "CBD Isolate 99%",
     description: "Highly purified CBD isolate for professional use.",
@@ -25,7 +33,35 @@ const products = [
   },
 ];
 
-export default function NewProducts() {
+export default async function NewProducts() {
+  let products: ProductCardItem[] = fallbackProducts;
+
+  try {
+    const response = await fetchProducts(
+      {
+        page: 1,
+        limit: 4,
+        sort: "createdAt:desc",
+      },
+      {
+        next: { revalidate: 60 },
+      },
+    );
+
+    if (response.items.length > 0) {
+      products = response.items.map((item) => ({
+        title: item.name,
+        description: item.content?.description ?? "Premium product",
+        price: formatPrice(item.priceCents, item.currency),
+        imageUrl:
+          item.images?.slice().sort((a, b) => a.sortOrder - b.sortOrder)[0]
+            ?.url ?? "",
+      }));
+    }
+  } catch {
+    // keep fallback data
+  }
+
   return (
     <section className="w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -42,7 +78,13 @@ export default function NewProducts() {
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {products.map((product, index) => (
-          <ProductCard key={`${product.title}-${index}`} {...product} />
+          <ProductCard
+            key={`${product.title}-${index}`}
+            title={product.title}
+            description={product.description}
+            price={product.price}
+            imageUrl={product.imageUrl}
+          />
         ))}
       </div>
     </section>
