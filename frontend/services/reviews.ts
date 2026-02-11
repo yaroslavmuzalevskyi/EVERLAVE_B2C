@@ -1,20 +1,19 @@
 import { apiFetch } from "@/lib/apiClient";
 
 export type ReviewImage = {
-  id: string;
   url: string;
 };
 
 export type ReviewUser = {
-  id: string;
   name: string;
 };
 
 export type ReviewItem = {
-  id: string;
+  id?: string;
   rating: number;
   text?: string;
   createdAt: string;
+  isMine?: boolean;
   user: ReviewUser;
   images?: ReviewImage[];
 };
@@ -27,15 +26,9 @@ export type ReviewsResponse = {
 };
 
 export type ReviewSummary = {
-  count: number;
-  avg: number;
-  breakdown: Record<"1" | "2" | "3" | "4" | "5", number>;
+  ratingAvg: number;
+  reviewCount: number;
 };
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  "";
 
 export async function fetchReviews(
   productId: string,
@@ -46,8 +39,8 @@ export async function fetchReviews(
     page: String(page),
     limit: String(limit),
   });
-  const response = await fetch(
-    `${API_BASE_URL}/products/${productId}/reviews?${params.toString()}`,
+  const response = await apiFetch(
+    `/products/${productId}/reviews?${params.toString()}`,
   );
 
   if (!response.ok) {
@@ -58,9 +51,7 @@ export async function fetchReviews(
 }
 
 export async function fetchReviewSummary(productId: string) {
-  const response = await fetch(
-    `${API_BASE_URL}/products/${productId}/reviews/summary`,
-  );
+  const response = await apiFetch(`/products/${productId}/reviews/summary`);
 
   if (!response.ok) {
     throw new Error("Failed to load review summary");

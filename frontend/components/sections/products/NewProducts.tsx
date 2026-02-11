@@ -2,36 +2,24 @@ import Button from "@/components/ui/Button";
 import Link from "next/link";
 import ProductCard from "@/components/ui/ProductCard";
 import { fetchProducts, formatPrice } from "@/services/products";
+import { seedItems } from "@/lib/seeds";
 
 type ProductCardItem = {
+  productId?: string;
   title: string;
   description: string;
   price: string;
   imageUrl?: string;
 };
 
-const fallbackProducts: ProductCardItem[] = [
-  {
-    title: "CBD Isolate 99%",
-    description: "Highly purified CBD isolate for professional use.",
-    price: "€56.32",
-  },
-  {
-    title: "CBD Isolate 99%",
-    description: "Highly purified CBD isolate for professional use.",
-    price: "€56.32",
-  },
-  {
-    title: "CBD Isolate 99%",
-    description: "Highly purified CBD isolate for professional use.",
-    price: "€56.32",
-  },
-  {
-    title: "CBD Isolate 99%",
-    description: "Highly purified CBD isolate for professional use.",
-    price: "€56.32",
-  },
-];
+const fallbackProducts: ProductCardItem[] = seedItems.slice(0, 4).map(
+  (seed) => ({
+    productId: seed.productId ?? seed.slug,
+    title: seed.title,
+    description: seed.description,
+    price: seed.price,
+  }),
+);
 
 export default async function NewProducts() {
   let products: ProductCardItem[] = fallbackProducts;
@@ -50,6 +38,7 @@ export default async function NewProducts() {
 
     if (response.items.length > 0) {
       products = response.items.map((item) => ({
+        productId: item.id,
         title: item.name,
         description: item.content?.description ?? "Premium product",
         price: formatPrice(item.priceCents, item.currency),
@@ -84,6 +73,8 @@ export default async function NewProducts() {
             description={product.description}
             price={product.price}
             imageUrl={product.imageUrl}
+            productId={product.productId}
+            href={product.productId ? `/seeds/${product.productId}` : undefined}
           />
         ))}
       </div>

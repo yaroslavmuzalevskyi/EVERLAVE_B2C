@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Button from "@/components/ui/Button";
+import AddToCartButton from "@/components/cart/AddToCartButton";
 import { cn } from "@/lib/utils";
 
 type NewProductCardProps = {
@@ -12,6 +12,7 @@ type NewProductCardProps = {
   href?: string;
   showButton?: boolean;
   imageUrl?: string;
+  productId?: string;
 };
 
 export default function ProductCard({
@@ -24,7 +25,9 @@ export default function ProductCard({
   href,
   showButton = true,
   imageUrl,
+  productId,
 }: NewProductCardProps) {
+  const resolvedHref = href ?? (productId ? `/seeds/${productId}` : undefined);
   const content = (
     <>
       <div className="relative rounded-2xl bg-sr_w p-4">
@@ -59,17 +62,19 @@ export default function ProductCard({
 
   return (
     <div className="flex h-full flex-col">
-      {href ? (
-        <Link href={href} className="flex flex-1 flex-col">
+      {resolvedHref ? (
+        <Link href={resolvedHref} className="flex flex-1 flex-col">
           {content}
         </Link>
       ) : (
         content
       )}
       {showButton && (
-        <Button variant="category" className="mt-3 w-full">
-          Add to Cart +
-        </Button>
+        <AddToCartButton
+          productId={productId}
+          className="mt-3 w-full"
+          variant="category"
+        />
       )}
     </div>
   );

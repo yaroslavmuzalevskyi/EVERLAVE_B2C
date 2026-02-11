@@ -2,9 +2,23 @@ type ReviewCardProps = {
   name: string;
   rating: number;
   text: string;
+  images?: string[];
+  createdAt?: string;
+  isMine?: boolean;
+  onDelete?: () => void;
 };
 
-export default function ReviewCard({ name, rating, text }: ReviewCardProps) {
+export default function ReviewCard({
+  name,
+  rating,
+  text,
+  images = [],
+  createdAt,
+  isMine,
+  onDelete,
+}: ReviewCardProps) {
+  const visibleImages = images.slice(0, 3);
+
   return (
     <div className="rounded-2xl bg-pr_w p-5 text-pr_dg">
       <div className="flex items-center justify-between">
@@ -12,17 +26,40 @@ export default function ReviewCard({ name, rating, text }: ReviewCardProps) {
           <span className="h-5 w-5 rounded-full bg-sr_dg" />
           {name}
         </div>
-        <div className="text-xs text-pr_dg/70">
-          {"★".repeat(rating)}
-          {"☆".repeat(5 - rating)}
+        <div className="flex items-center gap-3">
+          {isMine && onDelete ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="text-xs text-pr_dr"
+            >
+              Delete
+            </button>
+          ) : null}
+          <div className="text-xs text-pr_dg/70">
+            {"★".repeat(rating)}
+            {"☆".repeat(5 - rating)}
+          </div>
         </div>
       </div>
+      {createdAt ? (
+        <p className="mt-1 text-xs text-pr_dg/60">
+          {new Date(createdAt).toLocaleDateString()}
+        </p>
+      ) : null}
       <p className="mt-3 text-xs text-pr_dg/70">{text}</p>
-      <div className="mt-4 grid grid-cols-3 gap-3">
-        <div className="h-16 rounded-lg bg-sr_dg/90" />
-        <div className="h-16 rounded-lg bg-sr_dg/90" />
-        <div className="h-16 rounded-lg bg-sr_dg/90" />
-      </div>
+      {visibleImages.length > 0 ? (
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          {visibleImages.map((url, index) => (
+            <img
+              key={`${url}-${index}`}
+              src={url}
+              alt=""
+              className="h-16 w-full rounded-lg object-cover"
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

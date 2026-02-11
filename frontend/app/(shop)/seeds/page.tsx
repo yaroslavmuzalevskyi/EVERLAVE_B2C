@@ -5,6 +5,7 @@ import FilterDropdown from "@/components/seeds/FilterDropdown";
 import FilterToggle from "@/components/seeds/FilterToggle";
 import ProductCard from "@/components/ui/ProductCard";
 import { seedItems } from "@/lib/seeds";
+import { fetchProducts, formatPrice } from "@/services/products";
 
 const filterOptions = {
   sorting: [
@@ -39,15 +40,42 @@ const filterOptions = {
   ],
 };
 
+type SeedCardItem = {
+  productId?: string;
+  title: string;
+  description: string;
+  price: string;
+  imageUrl?: string;
+  category?: string;
+  priceValue?: number;
+  text?: string;
+};
+
+const sortMap: Record<string, string | undefined> = {
+  featured: "createdAt:desc",
+  "price-asc": "price:asc",
+  "price-desc": "price:desc",
+};
+
 function getPriceValue(price: string) {
   const numeric = Number(price.replace("€", "").trim());
   return Number.isNaN(numeric) ? 0 : numeric;
 }
 
-function getYieldValue(yieldText: string) {
-  const match = yieldText.match(/\d+/);
-  return match ? Number(match[0]) : 0;
+function getTextValue(item: SeedCardItem) {
+  if (item.text) return item.text;
+  return `${item.title} ${item.description}`.toLowerCase();
 }
+
+const fallbackItems: SeedCardItem[] = seedItems.map((seed) => ({
+  productId: seed.productId ?? seed.slug,
+  title: seed.title,
+  description: seed.description,
+  price: seed.price,
+  priceValue: getPriceValue(seed.price),
+  category: seed.category,
+  text: `${seed.title} ${seed.description} ${seed.seedType} ${seed.thc} ${seed.yield} ${seed.flowering}`.toLowerCase(),
+}));
 
 export default function SeedsPage() {
   const [openFilter, setOpenFilter] = useState<string | null>(null);
@@ -61,6 +89,12 @@ export default function SeedsPage() {
   const [yieldFilter, setYieldFilter] = useState("");
   const [outdoorOnly, setOutdoorOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [items, setItems] = useState<SeedCardItem[]>(
+    fallbackItems.slice(0, 8),
+  );
+  const [total, setTotal] = useState(fallbackItems.length);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const pageSize = 8;
 
   useEffect(() => {
@@ -74,89 +108,8 @@ export default function SeedsPage() {
     return () => document.removeEventListener("click", handleClick);
   }, []);
 
-  const filteredSeeds = useMemo(() => {
-    let items = [...seedItems];
-
-    if (outdoorOnly) {
-      items = items.filter((item) => item.category.toLowerCase() === "outdoor");
-    }
-
-    if (priceFilter) {
-      items = items.filter((item) => {
-        const value = getPriceValue(item.price);
-        if (priceFilter === "0-25") return value <= 25;
-        if (priceFilter === "25-50") return value > 25 && value <= 50;
-        if (priceFilter === "50+") return value > 50;
-        return true;
-      });
-    }
-
-    if (minPrice || maxPrice) {
-      const min = minPrice ? Number(minPrice) : 0;
-      const max = maxPrice ? Number(maxPrice) : Infinity;
-      items = items.filter((item) => {
-        const value = getPriceValue(item.price);
-        return value >= min && value <= max;
-      });
-    }
-
-    if (seedTypeFilter) {
-      items = items.filter((item) => {
-        const seedType = item.seedType.toLowerCase();
-        if (seedTypeFilter === "feminized")
-          return seedType.includes("feminized");
-        if (seedTypeFilter === "autoflower")
-          return seedType.includes("autoflower");
-        if (seedTypeFilter === "na") return seedType === "n/a";
-        return true;
-      });
-    }
-
-    if (floweringFilter) {
-      items = items.filter((item) => {
-        const flowering = item.flowering.toLowerCase();
-        if (flowering === "n/a") return false;
-        if (floweringFilter === "up-8") return flowering.includes("8");
-        if (floweringFilter === "8-10")
-          return (
-            flowering.includes("8") ||
-            flowering.includes("9") ||
-            flowering.includes("10")
-          );
-        if (floweringFilter === "10+") return flowering.includes("10");
-        return true;
-      });
-    }
-
-    if (thcFilter) {
-      items = items.filter((item) => {
-        const thc = item.thc.toLowerCase();
-        if (thcFilter === "low")
-          return thc.includes("low") || thc.includes("0%");
-        if (thcFilter === "medium") return thc.includes("medium");
-        if (thcFilter === "high") return thc.includes("high");
-        return true;
-      });
-    }
-
-    if (yieldFilter) {
-      items = items.filter((item) => {
-        const value = getYieldValue(item.yield);
-        if (!value) return false;
-        if (yieldFilter === "400-500") return value >= 400 && value < 500;
-        if (yieldFilter === "500-650") return value >= 500 && value <= 650;
-        if (yieldFilter === "650+") return value > 650;
-        return true;
-      });
-    }
-
-    if (sorting === "price-asc") {
-      items.sort((a, b) => getPriceValue(a.price) - getPriceValue(b.price));
-    } else if (sorting === "price-desc") {
-      items.sort((a, b) => getPriceValue(b.price) - getPriceValue(a.price));
-    }
-
-    return items;
+  useEffect(() => {
+    setCurrentPage(1);
   }, [
     sorting,
     priceFilter,
@@ -169,11 +122,189 @@ export default function SeedsPage() {
     outdoorOnly,
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredSeeds.length / pageSize));
-  const pageSeeds = filteredSeeds.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
+  const priceRange = useMemo(() => {
+    if (priceFilter === "0-25") return { min: 0, max: 25 };
+    if (priceFilter === "25-50") return { min: 25, max: 50 };
+    if (priceFilter === "50+") return { min: 50, max: undefined };
+    return {
+      min: minPrice ? Number(minPrice) : undefined,
+      max: maxPrice ? Number(maxPrice) : undefined,
+    };
+  }, [priceFilter, minPrice, maxPrice]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProducts = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const response = await fetchProducts({
+          page: currentPage,
+          limit: pageSize,
+          sort: sortMap[sorting],
+          minPrice:
+            priceRange.min !== undefined
+              ? Math.round(priceRange.min * 100)
+              : undefined,
+          maxPrice:
+            priceRange.max !== undefined
+              ? Math.round(priceRange.max * 100)
+              : undefined,
+          category: outdoorOnly ? "outdoor" : undefined,
+        });
+
+        if (!isMounted) return;
+
+        const mapped = response.items.map((item) => ({
+          productId: item.id,
+          title: item.name,
+          description: item.content?.description ?? "Premium product",
+          price: formatPrice(item.priceCents, item.currency),
+          imageUrl:
+            item.images?.slice().sort((a, b) => a.sortOrder - b.sortOrder)[0]
+              ?.url ?? "",
+          category: item.category?.slug ?? item.category?.name,
+          priceValue: item.priceCents / 100,
+          text: `${item.name} ${item.content?.description ?? ""}`.toLowerCase(),
+        }));
+
+        setItems(mapped);
+        setTotal(response.total);
+      } catch {
+        if (!isMounted) return;
+        const fallbackPage = fallbackItems.slice(
+          (currentPage - 1) * pageSize,
+          currentPage * pageSize,
+        );
+        setItems(fallbackPage);
+        setTotal(fallbackItems.length);
+        setError("Failed to load products. Showing offline data.");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentPage, pageSize, sorting, priceRange, outdoorOnly]);
+
+  const filteredItems = useMemo(() => {
+    let filtered = [...items];
+
+    if (outdoorOnly) {
+      filtered = filtered.filter((item) => {
+        const category = item.category?.toLowerCase() ?? "";
+        return category.includes("outdoor") || getTextValue(item).includes("outdoor");
+      });
+    }
+
+    if (priceFilter) {
+      filtered = filtered.filter((item) => {
+        const value = item.priceValue ?? getPriceValue(item.price);
+        if (priceFilter === "0-25") return value <= 25;
+        if (priceFilter === "25-50") return value > 25 && value <= 50;
+        if (priceFilter === "50+") return value > 50;
+        return true;
+      });
+    }
+
+    if (priceRange.min !== undefined || priceRange.max !== undefined) {
+      filtered = filtered.filter((item) => {
+        const value = item.priceValue ?? getPriceValue(item.price);
+        const min = priceRange.min ?? 0;
+        const max = priceRange.max ?? Infinity;
+        return value >= min && value <= max;
+      });
+    }
+
+    if (seedTypeFilter) {
+      filtered = filtered.filter((item) => {
+        const text = getTextValue(item);
+        if (seedTypeFilter === "feminized") return text.includes("feminized");
+        if (seedTypeFilter === "autoflower")
+          return text.includes("autoflower") || text.includes("auto");
+        if (seedTypeFilter === "na")
+          return !text.includes("feminized") && !text.includes("autoflower");
+        return true;
+      });
+    }
+
+    if (floweringFilter) {
+      filtered = filtered.filter((item) => {
+        const text = getTextValue(item);
+        if (floweringFilter === "up-8") return text.includes("8");
+        if (floweringFilter === "8-10")
+          return text.includes("8") || text.includes("9") || text.includes("10");
+        if (floweringFilter === "10+") return text.includes("10");
+        return true;
+      });
+    }
+
+    if (thcFilter) {
+      filtered = filtered.filter((item) => {
+        const text = getTextValue(item);
+        if (thcFilter === "low") return text.includes("low") || text.includes("0%");
+        if (thcFilter === "medium") return text.includes("medium");
+        if (thcFilter === "high") return text.includes("high");
+        return true;
+      });
+    }
+
+    if (yieldFilter) {
+      filtered = filtered.filter((item) => {
+        const text = getTextValue(item);
+        if (yieldFilter === "400-500") return text.includes("400") || text.includes("500");
+        if (yieldFilter === "500-650") return text.includes("500") || text.includes("650");
+        if (yieldFilter === "650+") return text.includes("650");
+        return true;
+      });
+    }
+
+    if (sorting === "price-asc") {
+      filtered.sort(
+        (a, b) =>
+          (a.priceValue ?? getPriceValue(a.price)) -
+          (b.priceValue ?? getPriceValue(b.price)),
+      );
+    } else if (sorting === "price-desc") {
+      filtered.sort(
+        (a, b) =>
+          (b.priceValue ?? getPriceValue(b.price)) -
+          (a.priceValue ?? getPriceValue(a.price)),
+      );
+    }
+
+    return filtered;
+  }, [
+    items,
+    outdoorOnly,
+    priceFilter,
+    priceRange,
+    seedTypeFilter,
+    floweringFilter,
+    thcFilter,
+    yieldFilter,
+    sorting,
+  ]);
+
+  const clientFilterActive = Boolean(
+    seedTypeFilter || floweringFilter || thcFilter || yieldFilter,
   );
+
+  const totalPages = clientFilterActive
+    ? 1
+    : Math.max(1, Math.ceil(total / pageSize));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   return (
     <div className="bg-pr_dg text-pr_w">
       <section className="w-full px-4 pt-[120px] pb-24 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]">
@@ -281,18 +412,28 @@ export default function SeedsPage() {
           />
         </div>
 
+        {error ? (
+          <p className="mt-4 text-xs text-pr_y/90">{error}</p>
+        ) : null}
+
         <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {pageSeeds.map((seed) => (
+          {filteredItems.map((seed) => (
             <ProductCard
-              key={seed.slug}
+              key={seed.productId ?? seed.title}
               title={seed.title}
               description={seed.description}
               price={seed.price}
               isNew={false}
-              href={`/seeds/${seed.slug}`}
+              href={seed.productId ? `/seeds/${seed.productId}` : undefined}
+              productId={seed.productId}
+              imageUrl={seed.imageUrl}
             />
           ))}
         </div>
+
+        {!loading && filteredItems.length === 0 ? (
+          <p className="mt-6 text-sm text-pr_w/70">No products found.</p>
+        ) : null}
 
         <div className="mt-12 flex items-center justify-center gap-4">
           <button
@@ -300,7 +441,7 @@ export default function SeedsPage() {
             onClick={() =>
               setCurrentPage((prev) => Math.max(1, prev - 1))
             }
-            disabled={currentPage === 1}
+            disabled={currentPage === 1 || totalPages === 1}
             className="flex h-12 w-20 items-center justify-center rounded-full bg-pr_w text-pr_dg transition disabled:opacity-50"
           >
             ←
@@ -328,7 +469,7 @@ export default function SeedsPage() {
             onClick={() =>
               setCurrentPage((prev) => Math.min(totalPages, prev + 1))
             }
-            disabled={currentPage === totalPages}
+            disabled={currentPage === totalPages || totalPages === 1}
             className="flex h-12 w-20 items-center justify-center rounded-full bg-pr_w text-pr_dg transition disabled:opacity-50"
           >
             →

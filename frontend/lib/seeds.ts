@@ -1,4 +1,5 @@
 export type SeedItem = {
+  productId?: string;
   slug: string;
   title: string;
   description: string;
@@ -16,6 +17,7 @@ export type SeedItem = {
 
 export const seedItems: SeedItem[] = [
   {
+    productId: "og-kush-feminized-seeds",
     slug: "og-kush-feminized-seeds",
     title: "OG Kush Feminized Seeds",
     description:
@@ -47,6 +49,7 @@ export const seedItems: SeedItem[] = [
     ],
   },
   {
+    productId: "gelato-auto-seeds",
     slug: "gelato-auto-seeds",
     title: "Gelato Auto Seeds",
     description:
@@ -70,6 +73,7 @@ export const seedItems: SeedItem[] = [
     ],
   },
   {
+    productId: "cbd-full-spectrum-oil-10",
     slug: "cbd-full-spectrum-oil-10",
     title: "CBD Full Spectrum Oil 10%",
     description: "Premium full spectrum CBD oil for daily wellness.",
@@ -92,6 +96,7 @@ export const seedItems: SeedItem[] = [
     ],
   },
   {
+    productId: "cbd-isolate-99",
     slug: "cbd-isolate-99",
     title: "CBD Isolate 99%",
     description: "Highly purified CBD isolate for professional use.",
@@ -112,6 +117,7 @@ export const seedItems: SeedItem[] = [
     ],
   },
   {
+    productId: "lemon-haze-cannabis-flower",
     slug: "lemon-haze-cannabis-flower",
     title: "Lemon Haze Cannabis Flower",
     description:
@@ -133,6 +139,7 @@ export const seedItems: SeedItem[] = [
     ],
   },
   {
+    productId: "thc-extract-live-rosin",
     slug: "thc-extract-live-rosin",
     title: "THC Extract – Live Rosin",
     description:
@@ -154,6 +161,7 @@ export const seedItems: SeedItem[] = [
     ],
   },
   {
+    productId: "cbd-gummies",
     slug: "cbd-gummies",
     title: "CBD Gummies",
     description: "Infused gummies with precise CBD dosage.",
@@ -174,6 +182,7 @@ export const seedItems: SeedItem[] = [
     ],
   },
   {
+    productId: "disposable-vape-cbd-blend",
     slug: "disposable-vape-cbd-blend",
     title: "Disposable Vape – CBD Blend",
     description:

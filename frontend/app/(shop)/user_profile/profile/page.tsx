@@ -31,23 +31,8 @@ export default function ProfilePage() {
                   <input
                     type="email"
                     defaultValue="stephan@evervale.com"
-                    className="w-full rounded-full border border-pr_dg/30 px-4 py-3 text-sm text-pr_dg outline-none"
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm font-semibold text-pr_dg">
-                  Phone
-                  <input
-                    type="tel"
-                    placeholder="+352 662 345 456"
-                    className="w-full rounded-full border border-pr_dg/30 px-4 py-3 text-sm text-pr_dg outline-none"
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm font-semibold text-pr_dg">
-                  Address
-                  <input
-                    type="text"
-                    placeholder="Luxembourg, Europe"
-                    className="w-full rounded-full border border-pr_dg/30 px-4 py-3 text-sm text-pr_dg outline-none"
+                    disabled
+                    className="w-full cursor-not-allowed rounded-full border border-pr_dg/30 bg-pr_w/70 px-4 py-3 text-sm text-pr_dg/70 outline-none"
                   />
                 </label>
               </form>
