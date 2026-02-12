@@ -1,7 +1,7 @@
 import Button from "@/components/ui/Button";
 import Link from "next/link";
 import ProductCard from "@/components/ui/ProductCard";
-import { fetchProducts, formatPrice } from "@/services/products";
+import { fetchProducts, formatPrice, getPrimaryImageUrl } from "@/services/products";
 import { seedItems } from "@/lib/seeds";
 
 type ProductCardItem = {
@@ -42,9 +42,7 @@ export default async function NewProducts() {
         title: item.name,
         description: item.content?.description ?? "Premium product",
         price: formatPrice(item.priceCents, item.currency),
-        imageUrl:
-          item.images?.slice().sort((a, b) => a.sortOrder - b.sortOrder)[0]
-            ?.url ?? "",
+        imageUrl: getPrimaryImageUrl(item.images),
       }));
     }
   } catch {
@@ -60,7 +58,7 @@ export default async function NewProducts() {
             Browse product categories for cultivation and distribution
           </p>
         </div>
-        <Link href="/seeds">
+        <Link href="/seeds?tab=products">
           <Button variant="category">Explore Now!</Button>
         </Link>
       </div>

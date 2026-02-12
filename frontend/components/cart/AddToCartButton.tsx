@@ -21,6 +21,7 @@ export default function AddToCartButton({
   variant = "category",
   className,
 }: AddToCartButtonProps) {
+  const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
@@ -29,7 +30,7 @@ export default function AddToCartButton({
 
   const handleClick = async () => {
     if (!productId) return;
-    if (!isAuthenticated) {
+    if (!isAuthenticated && !disableAuth) {
       router.push(`/signin?next=${encodeURIComponent(pathname ?? "/")}`);
       return;
     }

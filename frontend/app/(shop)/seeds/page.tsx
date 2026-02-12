@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import FilterDropdown from "@/components/seeds/FilterDropdown";
 import FilterToggle from "@/components/seeds/FilterToggle";
 import ProductCard from "@/components/ui/ProductCard";
 import { seedItems } from "@/lib/seeds";
-import { fetchProducts, formatPrice } from "@/services/products";
+import { fetchProducts, formatPrice, getPrimaryImageUrl } from "@/services/products";
 
 const filterOptions = {
   sorting: [
@@ -78,6 +80,7 @@ const fallbackItems: SeedCardItem[] = seedItems.map((seed) => ({
 }));
 
 export default function SeedsPage() {
+  const searchParams = useSearchParams();
   const [openFilter, setOpenFilter] = useState<string | null>(null);
   const [sorting, setSorting] = useState("");
   const [priceFilter, setPriceFilter] = useState("");
@@ -96,6 +99,8 @@ export default function SeedsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const pageSize = 8;
+
+  const categoryParam = searchParams?.get("category")?.toLowerCase() ?? "";
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -120,6 +125,7 @@ export default function SeedsPage() {
     thcFilter,
     yieldFilter,
     outdoorOnly,
+    categoryParam,
   ]);
 
   const priceRange = useMemo(() => {
@@ -151,7 +157,7 @@ export default function SeedsPage() {
             priceRange.max !== undefined
               ? Math.round(priceRange.max * 100)
               : undefined,
-          category: outdoorOnly ? "outdoor" : undefined,
+          category: categoryParam || (outdoorOnly ? "outdoor" : undefined),
         });
 
         if (!isMounted) return;
@@ -161,9 +167,7 @@ export default function SeedsPage() {
           title: item.name,
           description: item.content?.description ?? "Premium product",
           price: formatPrice(item.priceCents, item.currency),
-          imageUrl:
-            item.images?.slice().sort((a, b) => a.sortOrder - b.sortOrder)[0]
-              ?.url ?? "",
+          imageUrl: getPrimaryImageUrl(item.images),
           category: item.category?.slug ?? item.category?.name,
           priceValue: item.priceCents / 100,
           text: `${item.name} ${item.content?.description ?? ""}`.toLowerCase(),
@@ -190,12 +194,17 @@ export default function SeedsPage() {
     return () => {
       isMounted = false;
     };
-  }, [currentPage, pageSize, sorting, priceRange, outdoorOnly]);
+  }, [currentPage, pageSize, sorting, priceRange, outdoorOnly, categoryParam]);
 
   const filteredItems = useMemo(() => {
     let filtered = [...items];
 
-    if (outdoorOnly) {
+    if (categoryParam) {
+      filtered = filtered.filter((item) => {
+        const category = item.category?.toLowerCase() ?? "";
+        return category.includes(categoryParam);
+      });
+    } else if (outdoorOnly) {
       filtered = filtered.filter((item) => {
         const category = item.category?.toLowerCase() ?? "";
         return category.includes("outdoor") || getTextValue(item).includes("outdoor");
@@ -282,6 +291,7 @@ export default function SeedsPage() {
   }, [
     items,
     outdoorOnly,
+    categoryParam,
     priceFilter,
     priceRange,
     seedTypeFilter,
@@ -308,7 +318,15 @@ export default function SeedsPage() {
   return (
     <div className="bg-pr_dg text-pr_w">
       <section className="w-full px-4 pt-[120px] pb-24 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]">
-        <p className="text-xs text-pr_w/60">Home / Cannabis Seeds</p>
+        <p className="text-xs text-pr_w/60">
+          <Link href="/" className="hover:text-pr_w">
+            Home
+          </Link>{" "}
+          /{" "}
+          <Link href="/seeds" className="hover:text-pr_w">
+            Cannabis Seeds
+          </Link>
+        </p>
         <h1 className="mt-2 text-3xl font-semibold">Cannabis Seeds</h1>
 
         <div className="mt-4 flex flex-wrap gap-2" data-filter-root>

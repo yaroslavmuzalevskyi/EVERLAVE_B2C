@@ -7,39 +7,49 @@ import { Menu, X, ShoppingCart, User } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { usePathname, useSearchParams } from "next/navigation";
+import { seedItems } from "@/lib/seeds";
+
+const BUSINESS_URL = "https://evervale.com";
+
+const seedDropdownItems = seedItems.slice(0, 5).map((seed) => ({
+  label: seed.title,
+  href: `/seeds/${seed.productId ?? seed.slug}`,
+}));
 
 const tabs: SectionTab[] = [
-  { id: "home", label: "Home" },
-  { id: "seeds", label: "Seeds", hasDropdown: true },
-  { id: "cannabinoid", label: "Cannabinoid products" },
-  { id: "business", label: "For Business" },
-  { id: "blog", label: "Blog" },
+  { id: "home", label: "Home", href: "/" },
+  { id: "seeds", label: "Seeds", dropdownItems: seedDropdownItems },
+  { id: "products", label: "Cannabinoid products", href: "/seeds?tab=products" },
+  {
+    id: "business",
+    label: "For Business",
+    href: BUSINESS_URL,
+    external: true,
+  },
+  { id: "blog", label: "Blog", href: "/blog" },
 ];
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuMounted, setMobileMenuMounted] = useState(false);
-  const [activeSection, setActiveSection] = useState("home");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
-
-  const handleTabClick = (tab: SectionTab) => {
-    setActiveSection(tab.id);
-
-    const section = document.getElementById(tab.id);
-    if (section) {
-      window.scrollTo({
-        top: section.offsetTop - 100,
-        behavior: "smooth",
-      });
-    }
-
-    setMobileMenuOpen(false);
-  };
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (mobileMenuOpen) setMobileMenuMounted(true);
   }, [mobileMenuOpen]);
+
+  const activeId = useMemo(() => {
+    if (pathname === "/") return "home";
+    if (pathname.startsWith("/seeds")) {
+      return searchParams?.get("tab") === "products" ? "products" : "seeds";
+    }
+    if (pathname.startsWith("/blog")) return "blog";
+    return "home";
+  }, [pathname, searchParams]);
 
   const { cartHref, profileHref } = useMemo(() => {
     if (isAuthenticated) {
@@ -62,11 +72,7 @@ const Header = () => {
           {/* Desktop (1024px+) */}
           <div className="hidden lg:flex h-[80px] lg:h-[96px] items-center justify-between gap-10">
             <Logo />
-            <SectionSlider
-              tabs={tabs}
-              activeId={activeSection}
-              onChange={handleTabClick}
-            />
+            <SectionSlider tabs={tabs} activeId={activeId} />
             <div className="flex items-center gap-3">
               <Link
                 href={cartHref}
@@ -135,8 +141,8 @@ const Header = () => {
             <div className="py-4 border-b border-white/10">
               <SectionSlider
                 tabs={tabs}
-                activeId={activeSection}
-                onChange={handleTabClick}
+                activeId={activeId}
+                onNavigate={() => setMobileMenuOpen(false)}
               />
             </div>
             <div className="flex items-center gap-3 py-4">

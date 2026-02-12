@@ -71,17 +71,28 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
     ? formatPrice(priceCents, currency)
     : seed?.price ?? "€0";
 
-  const price3x = priceCents
-    ? formatPrice(priceCents * 3, currency)
-    : "€82.50";
-  const price5x = priceCents
-    ? formatPrice(priceCents * 5, currency)
-    : "€137.50";
+  const variants =
+    product?.content?.variants?.filter((variant) => variant.label) ?? [];
+  const variantPrices =
+    variants.length > 0
+      ? variants.map((variant) => ({
+          label: variant.label,
+          price: formatPrice(variant.priceCents, currency),
+        }))
+      : [
+          { label: "1x", price: priceDisplay },
+          { label: "3x", price: formatPrice(priceCents * 3, currency) },
+          { label: "5x", price: formatPrice(priceCents * 5, currency) },
+        ];
 
   const effects =
-    seed?.effects ?? product?.content?.keyFacts ?? ["Premium Quality"];
+    product?.content?.effects ??
+    seed?.effects ??
+    product?.content?.keyFacts ??
+    ["Premium Quality"];
 
-  const sections = seed?.sections ??
+  const sections =
+    seed?.sections ??
     product?.content?.sections?.map((section) => ({
       heading: section.title,
       body: [section.text],
@@ -94,30 +105,73 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
 
   const infoRows: Array<{ label: string; value: string }> = [];
 
-  if (seed?.thc) {
-    infoRows.push({ label: "THC Level", value: seed.thc });
+  const facts = product?.content?.facts;
+  if (facts?.flavorAroma) {
+    infoRows.push({ label: "Flavor & Aroma", value: facts.flavorAroma });
   }
-  if (seed?.seedType) {
-    infoRows.push({ label: "Seed Type", value: seed.seedType });
+  if (facts?.thcLevel) {
+    infoRows.push({ label: "THC Level", value: facts.thcLevel });
   }
-  if (seed?.flowering && seed.flowering !== "N/A") {
-    infoRows.push({ label: "Flowering Cycle", value: seed.flowering });
+  if (facts?.seedType) {
+    infoRows.push({ label: "Seed Type", value: facts.seedType });
   }
-  if (seed?.yield && seed.yield !== "N/A") {
-    infoRows.push({ label: "Yield", value: seed.yield });
+  if (facts?.floweringCycle) {
+    infoRows.push({ label: "Flowering Cycle", value: facts.floweringCycle });
   }
-  if (!seed && product?.content?.keyFacts?.length) {
+  if (facts?.yield) {
+    infoRows.push({ label: "Yield", value: facts.yield });
+  }
+
+  if (!facts) {
+    if (seed?.thc) {
+      infoRows.push({ label: "THC Level", value: seed.thc });
+    }
+    if (seed?.seedType) {
+      infoRows.push({ label: "Seed Type", value: seed.seedType });
+    }
+    if (seed?.flowering && seed.flowering !== "N/A") {
+      infoRows.push({ label: "Flowering Cycle", value: seed.flowering });
+    }
+    if (seed?.yield && seed.yield !== "N/A") {
+      infoRows.push({ label: "Yield", value: seed.yield });
+    }
+  }
+
+  if (!seed && !facts && product?.content?.keyFacts?.length) {
     infoRows.push({
       label: "Key Facts",
       value: product.content.keyFacts.join(" · "),
     });
   }
 
+  if (!infoRows.find((row) => row.label === "Flavor & Aroma")) {
+    infoRows.unshift({ label: "Flavor & Aroma", value: FALLBACK_FLAVOR });
+  }
+
+  const geneticBalance = product?.content?.geneticBalance;
+  const indicaValue =
+    geneticBalance?.indica ??
+    geneticBalance?.abo ??
+    geneticBalance?.["indica"] ??
+    60;
+  const sativaValue =
+    geneticBalance?.sativa ??
+    geneticBalance?.ba ??
+    geneticBalance?.["sativa"] ??
+    40;
+
   return (
     <div className="bg-pr_dg text-pr_w">
       <section className="w-full px-4 pt-[120px] pb-24 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]">
         <p className="text-xs text-pr_w/60">
-          Home / Cannabis Seeds / {title}
+          <Link href="/" className="hover:text-pr_w">
+            Home
+          </Link>{" "}
+          /{" "}
+          <Link href="/seeds" className="hover:text-pr_w">
+            Cannabis Seeds
+          </Link>{" "}
+          / {title}
         </p>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_1fr]">
@@ -160,23 +214,18 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
             <div className="mt-4">
               <p className="text-xs font-semibold">Number of seeds:</p>
               <div className="mt-2 flex gap-2">
-                <button className="rounded-full border border-pr_dg/30 px-4 py-2 text-xs">
-                  1x {priceDisplay}
-                </button>
-                <button className="rounded-full border border-pr_dg/30 px-4 py-2 text-xs">
-                  3x {price3x}
-                </button>
-                <button className="rounded-full border border-pr_dg/30 px-4 py-2 text-xs">
-                  5x {price5x}
-                </button>
+                {variantPrices.map((variant) => (
+                  <button
+                    key={variant.label}
+                    className="rounded-full border border-pr_dg/30 px-4 py-2 text-xs"
+                  >
+                    {variant.label} {variant.price}
+                  </button>
+                ))}
               </div>
             </div>
 
             <div className="mt-5 grid gap-2 text-xs">
-              <div className="flex justify-between">
-                <span className="font-semibold">Flavor & Aroma:</span>
-                <span className="text-pr_dg/70">{FALLBACK_FLAVOR}</span>
-              </div>
               {infoRows.map((row) => (
                 <div key={row.label} className="flex justify-between">
                   <span className="font-semibold">{row.label}</span>
@@ -223,19 +272,25 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
               <div>
                 <div className="flex justify-between">
                   <span>Indica</span>
-                  <span>60%</span>
+                  <span>{indicaValue}%</span>
                 </div>
                 <div className="mt-2 h-2 rounded-full bg-pr_dg/10">
-                  <div className="h-2 w-[60%] rounded-full bg-pr_lg" />
+                  <div
+                    className="h-2 rounded-full bg-pr_lg"
+                    style={{ width: `${indicaValue}%` }}
+                  />
                 </div>
               </div>
               <div>
                 <div className="flex justify-between">
                   <span>Sativa</span>
-                  <span>40%</span>
+                  <span>{sativaValue}%</span>
                 </div>
                 <div className="mt-2 h-2 rounded-full bg-pr_dg/10">
-                  <div className="h-2 w-[40%] rounded-full bg-pr_lg" />
+                  <div
+                    className="h-2 rounded-full bg-pr_lg"
+                    style={{ width: `${sativaValue}%` }}
+                  />
                 </div>
               </div>
             </div>

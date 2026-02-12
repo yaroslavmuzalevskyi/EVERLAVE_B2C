@@ -30,7 +30,7 @@ export default function Hero() {
             and predictable results.
           </p>
           <Link
-            href="/seeds"
+            href="/seeds?tab=products"
             className="mt-3 inline-flex items-center justify-center rounded-full bg-pr_dg px-6 py-3 text-sm font-semibold text-pr_w transition hover:bg-sr_dg"
           >
             Explore Now!

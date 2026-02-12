@@ -29,6 +29,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+const DISABLE_AUTH = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -36,6 +37,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
+    if (DISABLE_AUTH) {
+      setAccessTokenState("dev");
+      setIsInitializing(false);
+      return;
+    }
     const init = async () => {
       const storedAccess = getAccessToken();
       const storedRefresh = getRefreshToken();
@@ -74,6 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
+      if (DISABLE_AUTH) {
+        setAccessTokenState("dev");
+        return;
+      }
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,6 +108,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = useCallback(
     async (name: string, email: string, password: string) => {
+      if (DISABLE_AUTH) {
+        setAccessTokenState("dev");
+        return;
+      }
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -121,6 +135,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    if (DISABLE_AUTH) {
+      setAccessTokenState("dev");
+      return;
+    }
     const refreshToken = getRefreshToken();
     try {
       if (refreshToken) {
@@ -140,8 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       accessToken,
-      isAuthenticated: Boolean(accessToken),
-      isInitializing,
+      isAuthenticated: DISABLE_AUTH ? true : Boolean(accessToken),
+      isInitializing: DISABLE_AUTH ? false : isInitializing,
       login,
       register,
       logout,

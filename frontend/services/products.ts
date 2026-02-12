@@ -1,13 +1,13 @@
 export type ProductImage = {
-  id: string;
+  id?: string;
   url: string;
   sortOrder: number;
 };
 
 export type ProductCategory = {
-  id: string;
-  name: string;
-  slug: string;
+  id?: string;
+  name?: string;
+  slug?: string;
 };
 
 export type ProductListItem = {
@@ -18,7 +18,7 @@ export type ProductListItem = {
   };
   priceCents: number;
   currency: string;
-  stockQty: number;
+  stockQty?: number;
   images?: ProductImage[];
   category?: ProductCategory;
   soldCount?: number;
@@ -38,6 +38,20 @@ export type ProductDetails = ProductListItem & {
     description?: string;
     keyFacts?: string[];
     sections?: Array<{ title: string; text: string }>;
+    facts?: {
+      yield?: string;
+      seedType?: string;
+      thcLevel?: string;
+      flavorAroma?: string;
+      floweringCycle?: string;
+    };
+    effects?: string[];
+    variants?: Array<{ label: string; priceCents: number }>;
+    geneticBalance?: {
+      indica?: number;
+      sativa?: number;
+      [key: string]: number | undefined;
+    };
   };
   createdAt?: string;
   updatedAt?: string;
@@ -69,6 +83,244 @@ type FetchInit = RequestInit & {
   next?: { revalidate?: number };
 };
 
+type RawImage =
+  | string
+  | {
+      id?: string;
+      url?: string;
+      src?: string;
+      path?: string;
+      sortOrder?: number;
+      order?: number;
+    };
+
+type RawProduct = {
+  id?: string;
+  _id?: string;
+  uuid?: string;
+  name?: string;
+  title?: string;
+  content?: {
+    description?: string;
+    keyFacts?: string[];
+    sections?: Array<{ title?: string; text?: string }>;
+    facts?: {
+      yield?: string;
+      seedType?: string;
+      thcLevel?: string;
+      flavorAroma?: string;
+      floweringCycle?: string;
+      [key: string]: string | undefined;
+    };
+    effects?: string[];
+    variants?: Array<{ label?: string; priceCents?: number }>;
+    geneticBalance?: Record<string, number | undefined>;
+  };
+  description?: string;
+  shortDescription?: string;
+  summary?: string;
+  priceCents?: number;
+  price?: number | string;
+  currency?: string;
+  stockQty?: number;
+  stock?: number;
+  images?: RawImage[];
+  image?: string;
+  category?:
+    | ProductCategory
+    | string
+    | { name?: string; slug?: string; id?: string };
+  soldCount?: number;
+  sold?: number;
+  ratingAvg?: number;
+  rating?: number;
+  reviewCount?: number;
+  reviews?: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+function normalizeCurrency(raw: RawProduct) {
+  return raw.currency || "EUR";
+}
+
+function normalizePriceCents(raw: RawProduct) {
+  if (typeof raw.priceCents === "number") return raw.priceCents;
+
+  if (typeof raw.price === "number") {
+    if (raw.price > 1000) return Math.round(raw.price);
+    return Math.round(raw.price * 100);
+  }
+
+  if (typeof raw.price === "string") {
+    const numeric = Number(raw.price.replace(/[^0-9.]/g, ""));
+    if (!Number.isFinite(numeric)) return 0;
+    if (numeric > 1000) return Math.round(numeric);
+    return Math.round(numeric * 100);
+  }
+
+  return 0;
+}
+
+function normalizeImages(images?: RawImage[], fallback?: string) {
+  const rawImages = images ?? (fallback ? [fallback] : []);
+  return rawImages
+    .map((image, index) => {
+      if (typeof image === "string") {
+        return {
+          id: `${index}`,
+          url: image,
+          sortOrder: index,
+        } as ProductImage;
+      }
+      const url = image.url || image.src || image.path;
+      if (!url) return null;
+      return {
+        id: image.id ?? `${index}`,
+        url,
+        sortOrder:
+          typeof image.sortOrder === "number"
+            ? image.sortOrder
+            : typeof image.order === "number"
+              ? image.order
+              : index,
+      } as ProductImage;
+    })
+    .filter(Boolean) as ProductImage[];
+}
+
+function normalizeCategory(raw: RawProduct): ProductCategory | undefined {
+  if (!raw.category) return undefined;
+  if (typeof raw.category === "string") {
+    return { name: raw.category, slug: raw.category };
+  }
+  return {
+    id: raw.category.id,
+    name: raw.category.name,
+    slug: raw.category.slug,
+  };
+}
+
+function normalizeContent(raw: RawProduct) {
+  const description =
+    raw.content?.description ||
+    raw.description ||
+    raw.shortDescription ||
+    raw.summary;
+  const keyFacts = raw.content?.keyFacts;
+  const sections = raw.content?.sections
+    ?.filter((section) => section.title || section.text)
+    .map((section) => ({
+      title: section.title ?? "Details",
+      text: section.text ?? "",
+    }));
+  const facts = raw.content?.facts;
+  const effects = raw.content?.effects;
+  const variants = raw.content?.variants?.filter((variant) => variant.label);
+  const geneticBalance = raw.content?.geneticBalance;
+
+  if (
+    !description &&
+    !keyFacts &&
+    !sections &&
+    !facts &&
+    !effects &&
+    !variants &&
+    !geneticBalance
+  )
+    return undefined;
+
+  return {
+    description,
+    keyFacts,
+    sections,
+    facts,
+    effects,
+    variants: variants?.map((variant) => ({
+      label: variant.label ?? "",
+      priceCents: variant.priceCents ?? 0,
+    })),
+    geneticBalance,
+  };
+}
+
+function normalizeProduct(raw: RawProduct): ProductDetails {
+  const id = raw.id || raw._id || raw.uuid || "";
+  const name = raw.name || raw.title || "Product";
+
+  return {
+    id,
+    name,
+    content: normalizeContent(raw),
+    priceCents: normalizePriceCents(raw),
+    currency: normalizeCurrency(raw),
+    stockQty: raw.stockQty ?? raw.stock,
+    images: normalizeImages(raw.images, raw.image),
+    category: normalizeCategory(raw),
+    soldCount: raw.soldCount ?? raw.sold,
+    ratingAvg: raw.ratingAvg ?? raw.rating,
+    reviewCount: raw.reviewCount ?? raw.reviews,
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
+  };
+}
+
+function normalizeListResponse(data: unknown): ProductListResponse {
+  if (Array.isArray(data)) {
+    return {
+      page: 1,
+      limit: data.length,
+      total: data.length,
+      items: data.map((item) => normalizeProduct(item as RawProduct)),
+    };
+  }
+
+  const payload = data as
+    | {
+        page?: number;
+        limit?: number;
+        total?: number;
+        items?: RawProduct[];
+        data?: RawProduct[] | { items?: RawProduct[]; total?: number; page?: number; limit?: number };
+        meta?: { total?: number; page?: number; limit?: number };
+      }
+    | undefined;
+
+  if (payload?.items) {
+    return {
+      page: payload.page ?? 1,
+      limit: payload.limit ?? payload.items.length,
+      total: payload.total ?? payload.items.length,
+      items: payload.items.map((item) => normalizeProduct(item)),
+    };
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return {
+      page: payload?.page ?? 1,
+      limit: payload?.limit ?? payload.data.length,
+      total: payload?.total ?? payload.data.length,
+      items: payload.data.map((item) => normalizeProduct(item)),
+    };
+  }
+
+  if (payload?.data && Array.isArray(payload.data.items)) {
+    return {
+      page: payload.data.page ?? payload.page ?? 1,
+      limit: payload.data.limit ?? payload.limit ?? payload.data.items.length,
+      total: payload.data.total ?? payload.total ?? payload.data.items.length,
+      items: payload.data.items.map((item) => normalizeProduct(item)),
+    };
+  }
+
+  return {
+    page: 1,
+    limit: 0,
+    total: 0,
+    items: [],
+  };
+}
+
 export async function fetchProducts(
   query: ProductQuery,
   init?: FetchInit,
@@ -92,7 +344,8 @@ export async function fetchProducts(
     throw new Error("Failed to load products");
   }
 
-  return (await response.json()) as ProductListResponse;
+  const data = (await response.json()) as unknown;
+  return normalizeListResponse(data);
 }
 
 export async function fetchProductById(id: string, init?: FetchInit) {
@@ -104,5 +357,13 @@ export async function fetchProductById(id: string, init?: FetchInit) {
     throw new Error("Failed to load product");
   }
 
-  return (await response.json()) as ProductDetails;
+  const data = (await response.json()) as RawProduct | { data?: RawProduct };
+  const rawProduct =
+    (data as { data?: RawProduct }).data ?? (data as RawProduct);
+  return normalizeProduct(rawProduct);
+}
+
+export function getPrimaryImageUrl(images?: ProductImage[]) {
+  if (!images || images.length === 0) return "";
+  return images.slice().sort((a, b) => a.sortOrder - b.sortOrder)[0]?.url ?? "";
 }

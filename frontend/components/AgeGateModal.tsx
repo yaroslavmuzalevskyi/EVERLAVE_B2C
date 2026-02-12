@@ -10,14 +10,22 @@ export default function AgeGateModal() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const hasSeen = window.localStorage.getItem(STORAGE_KEY);
+    const status = window.localStorage.getItem(STORAGE_KEY);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!hasSeen) setIsOpen(true);
+    if (status !== "allowed") setIsOpen(true);
   }, []);
 
   const handleClose = () => {
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, "seen");
+      window.localStorage.setItem(STORAGE_KEY, "allowed");
+    }
+    setIsOpen(false);
+  };
+
+  const handleDecline = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.location.href = "https://www.google.com/search?q=kitties&udm=2";
     }
     setIsOpen(false);
   };
@@ -35,12 +43,12 @@ export default function AgeGateModal() {
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-8">
           <button
             type="button"
-            onClick={handleClose}
+            onClick={handleDecline}
             className={cn(
               "w-full max-w-xs rounded-full bg-pr_w px-8 py-4 text-base font-semibold text-sr_dg transition hover:opacity-90 sm:w-auto",
             )}
           >
-            No, take me back
+            No
           </button>
           <button
             type="button"

@@ -23,6 +23,7 @@ const emptySummary: ReviewSummary = {
 };
 
 export default function ReviewsSection({ productId }: ReviewsSectionProps) {
+  const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
@@ -98,7 +99,7 @@ export default function ReviewsSection({ productId }: ReviewsSectionProps) {
   }, [productId, page]);
 
   const handleSubmit = async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated && !disableAuth) {
       router.push(`/signin?next=${encodeURIComponent(pathname ?? "/")}`);
       return;
     }
@@ -163,10 +164,10 @@ export default function ReviewsSection({ productId }: ReviewsSectionProps) {
         <div className="rounded-2xl bg-pr_w p-6 text-pr_dg">
           <div className="flex items-center justify-between text-sm font-semibold">
             <span>Average Rate</span>
-            <span>{summary.ratingAvg.toFixed(1)} ★</span>
+            <span>{Number(summary?.ratingAvg ?? 0).toFixed(1)} ★</span>
           </div>
           <p className="mt-1 text-xs text-pr_dg/60">
-            {summary.reviewCount} reviews
+            {summary?.reviewCount ?? 0} reviews
           </p>
           <div className="mt-4 space-y-3">
             <RatingBar
@@ -235,7 +236,7 @@ export default function ReviewsSection({ productId }: ReviewsSectionProps) {
           >
             {formLoading
               ? "Submitting..."
-              : isAuthenticated
+              : isAuthenticated || disableAuth
                 ? "Write a customer review"
                 : "Sign in to review"}
           </button>
