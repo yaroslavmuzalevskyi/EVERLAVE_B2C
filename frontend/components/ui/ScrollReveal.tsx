@@ -30,6 +30,17 @@ function isRevealCandidate(element: HTMLElement): boolean {
   if (element.closest("svg")) return false;
   if (element.dataset.noReveal === "true") return false;
   if (element.closest("[data-no-reveal='true']")) return false;
+  if (element.closest("[data-filter-root]")) return false;
+
+  const className =
+    typeof element.className === "string" ? element.className : "";
+  if (
+    className.includes("opacity-0") ||
+    className.includes("scale-") ||
+    className.includes("pointer-events-none")
+  ) {
+    return false;
+  }
 
   const style = window.getComputedStyle(element);
   if (style.display === "none" || style.visibility === "hidden") return false;

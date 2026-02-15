@@ -1,0 +1,6 @@
+[00:00:00.769] Server  LOG     ✓ Ready in 506ms
+[00:00:04.499] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:05.788] Browser WARN    Image with src "http://localhost:3000/logo.svg" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
+[00:02:55.395] Server  LOG     ✓ Compiled in 969ms
+[00:03:11.922] Server  LOG     ✓ Compiled in 353ms
+[00:03:31.001] Server  LOG     ✓ Compiled in 78ms

@@ -479,7 +479,11 @@ export default function SeedsPage() {
         </p>
         <h1 className="mt-2 text-3xl font-semibold">{pageTitle}</h1>
 
-        <div className="relative z-[120] mt-4 flex flex-wrap gap-2" data-filter-root>
+        <div
+          className="relative z-[120] mt-4 flex flex-wrap gap-2"
+          data-filter-root
+          data-no-reveal="true"
+        >
           <FilterDropdown
             id="category"
             label="Category"
