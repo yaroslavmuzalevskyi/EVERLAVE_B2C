@@ -25,12 +25,15 @@ export default async function PopularProducts() {
     });
 
     products = items
+      .filter((item): item is typeof item & { slug: string } =>
+        Boolean(item.slug),
+      )
       .slice()
       .sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
       .slice(0, 4)
       .map((item) => ({
-        productId: item.slug || item.id,
-        slug: item.slug || item.id,
+        productId: item.slug,
+        slug: item.slug,
         title: item.name,
         description: item.content?.description ?? "Premium product",
         price: formatPrice(item.priceCents, item.currency),

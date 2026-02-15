@@ -59,6 +59,8 @@ export async function addCartItem(productSlug: string, qty = 1) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      // Keep both keys for backend compatibility while migration settles.
+      productId: normalizedProductSlug,
       productSlug: normalizedProductSlug,
       qty: normalizedQty,
     }),

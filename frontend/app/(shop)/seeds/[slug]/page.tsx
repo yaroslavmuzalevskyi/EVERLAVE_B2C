@@ -3,7 +3,12 @@ import EffectPill from "@/components/seeds/EffectPill";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import ReviewsSection from "@/components/seeds/ReviewsSection";
 import ReviewSummaryInline from "@/components/seeds/ReviewSummaryInline";
-import { fetchAllProducts, fetchProductById, formatPrice } from "@/services/products";
+import {
+  fetchAllProducts,
+  fetchProductById,
+  formatPrice,
+  type ProductDetails,
+} from "@/services/products";
 import ProductGallery from "@/components/seeds/ProductGallery";
 import { seedItems } from "@/lib/seeds";
 
@@ -35,11 +40,31 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
   const resolvedParams = await params;
   const slug = resolvedParams.slug;
 
-  let product = null;
+  let product: ProductDetails | null = null;
   try {
     product = await fetchProductById(slug, { cache: "no-store" });
-  } catch {
-    product = null;
+  } catch {}
+
+  // Fallback to product list lookup when detail endpoint is flaky/unavailable.
+  if (!product) {
+    try {
+      const items = await fetchAllProducts(undefined, { cache: "no-store" });
+      const fallback = items.find((item) => item.slug === slug);
+      if (fallback) {
+        product = {
+          ...fallback,
+          content: fallback.content
+            ? {
+                ...fallback.content,
+                variants: fallback.content.variants?.map((variant) => ({
+                  label: variant.label ?? "1x",
+                  priceCents: variant.priceCents ?? fallback.priceCents,
+                })),
+              }
+            : undefined,
+        };
+      }
+    } catch {}
   }
 
   if (!product) {

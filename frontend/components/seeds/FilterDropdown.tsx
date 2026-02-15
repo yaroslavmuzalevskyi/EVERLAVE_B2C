@@ -79,7 +79,7 @@ export default function FilterDropdown({
   const maxTitle = maxLabel ?? "Maximum";
 
   return (
-    <div className="relative">
+    <div className="relative z-[120]">
       <button
         type="button"
         onClick={() => onToggle(id)}
@@ -94,7 +94,7 @@ export default function FilterDropdown({
       </button>
 
       <div
-        className={`absolute left-0 z-20 mt-2 origin-top-left rounded-2xl bg-sr_dg p-3 text-xs text-pr_w shadow-lg transition ${
+        className={`absolute left-0 z-[130] mt-2 origin-top-left rounded-2xl bg-sr_dg p-3 text-xs text-pr_w shadow-lg transition ${
           isInput ? "w-64" : "w-44"
         } ${
           open ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"

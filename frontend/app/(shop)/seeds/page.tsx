@@ -27,8 +27,8 @@ const filterOptions = {
 };
 
 type SeedCardItem = {
-  productId?: string;
-  slug?: string;
+  productId: string;
+  slug: string;
   title: string;
   description: string;
   price: string;
@@ -386,22 +386,26 @@ export default function SeedsPage() {
 
         if (!isMounted) return;
 
-        const mapped = items.map((item) => ({
-          productId: item.slug || item.id,
-          slug: item.slug || item.id,
-          title: item.name,
-          description: item.content?.description ?? "Premium product",
-          price: formatPrice(item.priceCents, item.currency),
-          imageUrl: getPrimaryImageUrl(item.images),
-          category: item.category?.slug ?? item.category?.name,
-          priceValue: item.priceCents / 100,
-          text: `${item.name} ${item.content?.description ?? ""}`.toLowerCase(),
-          createdAt: item.createdAt,
-          soldCount: item.soldCount ?? 0,
-          facts: item.content?.facts,
-          geneticBalance: item.content?.geneticBalance,
-          filters: item.filters,
-        }));
+        const mapped = items
+          .filter((item): item is typeof item & { slug: string } =>
+            Boolean(item.slug),
+          )
+          .map((item) => ({
+            productId: item.slug,
+            slug: item.slug,
+            title: item.name,
+            description: item.content?.description ?? "Premium product",
+            price: formatPrice(item.priceCents, item.currency),
+            imageUrl: getPrimaryImageUrl(item.images),
+            category: item.category?.slug ?? item.category?.name,
+            priceValue: item.priceCents / 100,
+            text: `${item.name} ${item.content?.description ?? ""}`.toLowerCase(),
+            createdAt: item.createdAt,
+            soldCount: item.soldCount ?? 0,
+            facts: item.content?.facts,
+            geneticBalance: item.content?.geneticBalance,
+            filters: item.filters,
+          }));
 
         setItems(mapped);
         setTotal(mapped.length);
@@ -475,7 +479,7 @@ export default function SeedsPage() {
         </p>
         <h1 className="mt-2 text-3xl font-semibold">{pageTitle}</h1>
 
-        <div className="mt-4 flex flex-wrap gap-2" data-filter-root>
+        <div className="relative z-[120] mt-4 flex flex-wrap gap-2" data-filter-root>
           <FilterDropdown
             id="category"
             label="Category"
@@ -786,13 +790,13 @@ export default function SeedsPage() {
               ))
             : orderedItems.map((seed) => (
                 <ProductCard
-                  key={seed.slug ?? seed.productId ?? seed.title}
+                  key={seed.slug}
                   title={seed.title}
                   description={seed.description}
                   price={seed.price}
                   isNew={false}
                   productId={seed.productId}
-                  href={seed.slug ? `/products/${seed.slug}` : undefined}
+                  href={`/products/${seed.slug}`}
                   imageUrl={seed.imageUrl}
                 />
               ))}
