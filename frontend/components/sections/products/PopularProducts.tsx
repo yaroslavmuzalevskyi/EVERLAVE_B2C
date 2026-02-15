@@ -1,52 +1,43 @@
 import Button from "@/components/ui/Button";
 import Link from "next/link";
 import ProductCard from "@/components/ui/ProductCard";
-import { fetchProducts, formatPrice, getPrimaryImageUrl } from "@/services/products";
-import { seedItems } from "@/lib/seeds";
+import {
+  fetchAllProducts,
+  formatPrice,
+  getPrimaryImageUrl,
+} from "@/services/products";
 
 type ProductCardItem = {
   productId?: string;
+  slug?: string;
   title: string;
   description: string;
   price: string;
   imageUrl?: string;
 };
 
-const fallbackProducts: ProductCardItem[] = seedItems.slice(0, 4).map(
-  (seed) => ({
-    productId: seed.productId ?? seed.slug,
-    title: seed.title,
-    description: seed.description,
-    price: seed.price,
-  }),
-);
-
 export default async function PopularProducts() {
-  let products: ProductCardItem[] = fallbackProducts;
+  let products: ProductCardItem[] = [];
 
   try {
-    const response = await fetchProducts(
-      {
-        page: 1,
-        limit: 4,
-        sort: "sold:desc",
-      },
-      {
-        next: { revalidate: 60 },
-      },
-    );
+    const items = await fetchAllProducts(undefined, {
+      next: { revalidate: 60 },
+    });
 
-    if (response.items.length > 0) {
-      products = response.items.map((item) => ({
-        productId: item.id,
+    products = items
+      .slice()
+      .sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
+      .slice(0, 4)
+      .map((item) => ({
+        productId: item.slug || item.id,
+        slug: item.slug || item.id,
         title: item.name,
         description: item.content?.description ?? "Premium product",
         price: formatPrice(item.priceCents, item.currency),
         imageUrl: getPrimaryImageUrl(item.images),
       }));
-    }
   } catch {
-    // keep fallback data
+    products = [];
   }
 
   return (
@@ -58,25 +49,29 @@ export default async function PopularProducts() {
             Browse product categories for cultivation and distribution
           </p>
         </div>
-        <Link href="/seeds?tab=products">
+        <Link href="/products">
           <Button variant="category">Explore Now!</Button>
         </Link>
       </div>
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {products.map((product, index) => (
-          <ProductCard
-            key={`${product.title}-${index}`}
-            title={product.title}
-            description={product.description}
-            price={product.price}
-            imageUrl={product.imageUrl}
-            productId={product.productId}
-            href={product.productId ? `/seeds/${product.productId}` : undefined}
-            badgeLabel="Popular"
-            badgeClassName="bg-pr_dg text-pr_w"
-          />
-        ))}
+        {products.length === 0 ? (
+          <p className="text-sm text-pr_w/70">No products found.</p>
+        ) : (
+          products.map((product, index) => (
+            <ProductCard
+              key={`${product.title}-${index}`}
+              title={product.title}
+              description={product.description}
+              price={product.price}
+              imageUrl={product.imageUrl}
+              productId={product.productId}
+              href={product.slug ? `/products/${product.slug}` : undefined}
+              badgeLabel="Popular"
+              badgeClassName="bg-pr_dg text-pr_w"
+            />
+          ))
+        )}
       </div>
     </section>
   );

@@ -80,6 +80,9 @@ export default function CartPage() {
     setAddress((prev) => ({ ...prev, [field]: value }));
   };
 
+  const getItemProductSlug = (item: NonNullable<CartState>["items"][number]) =>
+    item.product.slug?.trim() || "";
+
   const handleCheckout = async () => {
     setCheckoutError("");
 
@@ -151,71 +154,76 @@ export default function CartPage() {
           ) : (
             <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_0.6fr]">
               <div className="space-y-4">
-                {cart.items.map((item) => (
-                  <div
-                    key={item.product.id}
-                    className="rounded-2xl bg-pr_w p-4 text-pr_dg"
-                  >
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-4">
-                        {item.product.images?.[0]?.url ? (
-                          <img
-                            src={item.product.images[0].url}
-                            alt={item.product.name}
-                            className="h-20 w-20 rounded-xl object-cover"
-                          />
-                        ) : (
-                          <div className="h-20 w-20 rounded-xl bg-sr_dg/20" />
-                        )}
-                        <div>
-                          <p className="text-sm font-semibold">
-                            {item.product.name}
-                          </p>
-                          <p className="mt-1 text-xs text-pr_dg/60">
-                            {formatPrice(
-                              item.product.priceCents,
-                              item.product.currency,
-                            )}
-                          </p>
-                        </div>
-                      </div>
+                {cart.items.map((item) => {
+                  const productSlug = getItemProductSlug(item);
+                  if (!productSlug) return null;
 
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center rounded-full border border-pr_dg/20">
+                  return (
+                    <div
+                      key={productSlug}
+                      className="rounded-2xl bg-pr_w p-4 text-pr_dg"
+                    >
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-4">
+                          {item.product.images?.[0]?.url ? (
+                            <img
+                              src={item.product.images[0].url}
+                              alt={item.product.name}
+                              className="h-20 w-20 rounded-xl object-cover"
+                            />
+                          ) : (
+                            <div className="h-20 w-20 rounded-xl bg-sr_dg/20" />
+                          )}
+                          <div>
+                            <p className="text-sm font-semibold">
+                              {item.product.name}
+                            </p>
+                            <p className="mt-1 text-xs text-pr_dg/60">
+                              {formatPrice(
+                                item.product.priceCents,
+                                item.product.currency,
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center rounded-full border border-pr_dg/20">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleQtyChange(productSlug, item.qty - 1)
+                              }
+                              className="h-8 w-8 rounded-full text-sm"
+                            >
+                              -
+                            </button>
+                            <span className="px-3 text-sm">{item.qty}</span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleQtyChange(productSlug, item.qty + 1)
+                              }
+                              className="h-8 w-8 rounded-full text-sm"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <p className="text-sm font-semibold">
+                            {formatPrice(item.lineTotal, item.product.currency)}
+                          </p>
                           <button
                             type="button"
-                            onClick={() =>
-                              handleQtyChange(item.product.id, item.qty - 1)
-                            }
-                            className="h-8 w-8 rounded-full text-sm"
+                            onClick={() => handleRemove(productSlug)}
+                            className="text-xs text-pr_dr"
                           >
-                            -
-                          </button>
-                          <span className="px-3 text-sm">{item.qty}</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleQtyChange(item.product.id, item.qty + 1)
-                            }
-                            className="h-8 w-8 rounded-full text-sm"
-                          >
-                            +
+                            Remove
                           </button>
                         </div>
-                        <p className="text-sm font-semibold">
-                          {formatPrice(item.lineTotal, item.product.currency)}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => handleRemove(item.product.id)}
-                          className="text-xs text-pr_dr"
-                        >
-                          Remove
-                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="rounded-2xl bg-pr_w p-6 text-pr_dg h-fit">

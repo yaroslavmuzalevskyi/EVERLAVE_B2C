@@ -20,7 +20,7 @@ export default function FooterColumn({
   return (
     <div className={cn("flex flex-col gap-3 text-sm", className)}>
       <p className="text-pr_w/90 font-semibold">{title}</p>
-      <ul className="flex flex-col gap-2 text-pr_w/70">
+      <ul className="flex flex-col gap-2 text-pr_w/70 items-center lg:items-start">
         {links.map((link) => (
           <li key={`${title}-${link.label}`}>
             <Link href={link.href} className="hover:text-pr_w transition">

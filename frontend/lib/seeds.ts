@@ -89,9 +89,7 @@ export const seedItems: SeedItem[] = [
     sections: [
       {
         heading: "Description",
-        body: [
-          "Full spectrum oil formulated for everyday calm and balance.",
-        ],
+        body: ["Full spectrum oil formulated for everyday calm and balance."],
       },
     ],
   },
@@ -120,8 +118,7 @@ export const seedItems: SeedItem[] = [
     productId: "lemon-haze-cannabis-flower",
     slug: "lemon-haze-cannabis-flower",
     title: "Lemon Haze Cannabis Flower",
-    description:
-      "Aromatic indoor-grown flower with high terpene content.",
+    description: "Aromatic indoor-grown flower with high terpene content.",
     price: "€18",
     category: "Indoor",
     thc: "High (22–26%)",
@@ -142,8 +139,7 @@ export const seedItems: SeedItem[] = [
     productId: "thc-extract-live-rosin",
     slug: "thc-extract-live-rosin",
     title: "THC Extract – Live Rosin",
-    description:
-      "Solventless concentrate with preserved cannabinoid profile.",
+    description: "Solventless concentrate with preserved cannabinoid profile.",
     price: "€34.80",
     category: "Extract",
     thc: "High",
@@ -185,8 +181,7 @@ export const seedItems: SeedItem[] = [
     productId: "disposable-vape-cbd-blend",
     slug: "disposable-vape-cbd-blend",
     title: "Disposable Vape – CBD Blend",
-    description:
-      "Ready-to-use vape with balanced cannabinoid blend.",
+    description: "Ready-to-use vape with balanced cannabinoid blend.",
     price: "€24",
     category: "Vape",
     thc: "Low",

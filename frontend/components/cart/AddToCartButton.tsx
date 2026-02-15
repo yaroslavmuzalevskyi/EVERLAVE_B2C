@@ -24,11 +24,13 @@ export default function AddToCartButton({
   const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitializing } = useAuth();
   const [loading, setLoading] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const handleClick = async () => {
+    if (isInitializing) return;
     if (!productId) return;
     if (!isAuthenticated && !disableAuth) {
       router.push(`/signin?next=${encodeURIComponent(pathname ?? "/")}`);
@@ -36,11 +38,27 @@ export default function AddToCartButton({
     }
     try {
       setLoading(true);
+      setFailed(false);
       await addCartItem(productId, qty);
       setJustAdded(true);
       setTimeout(() => setJustAdded(false), 1500);
-    } catch {
+    } catch (error) {
       setJustAdded(false);
+      const status =
+        typeof error === "object" &&
+        error !== null &&
+        "status" in error &&
+        typeof (error as { status?: unknown }).status === "number"
+          ? ((error as { status: number }).status ?? 0)
+          : 0;
+
+      if ((status === 401 || status === 403) && !disableAuth) {
+        router.push(`/signin?next=${encodeURIComponent(pathname ?? "/")}`);
+        return;
+      }
+
+      setFailed(true);
+      setTimeout(() => setFailed(false), 1500);
     } finally {
       setLoading(false);
     }
@@ -50,11 +68,19 @@ export default function AddToCartButton({
     <Button
       variant={variant}
       className={className}
-      disabled={loading || !productId}
+      disabled={loading || !productId || isInitializing}
       onClick={handleClick}
       type="button"
     >
-      {loading ? "Adding..." : justAdded ? "Added" : label}
+      {loading
+        ? "Adding..."
+        : isInitializing
+          ? "Checking..."
+          : justAdded
+            ? "Added"
+            : failed
+              ? "Try again"
+              : label}
     </Button>
   );
 }

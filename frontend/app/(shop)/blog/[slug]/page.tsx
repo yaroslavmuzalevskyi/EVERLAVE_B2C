@@ -5,6 +5,10 @@ type BlogPageProps = {
   params: { slug: string } | Promise<{ slug: string }>;
 };
 
+export function generateStaticParams() {
+  return blogPosts.map((post) => ({ slug: post.slug }));
+}
+
 export default async function BlogPostPage({ params }: BlogPageProps) {
   const resolvedParams = await params;
   const post = blogPosts.find((item) => item.slug === resolvedParams.slug);

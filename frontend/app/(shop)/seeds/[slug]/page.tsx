@@ -1,29 +1,39 @@
 import Link from "next/link";
 import EffectPill from "@/components/seeds/EffectPill";
 import AddToCartButton from "@/components/cart/AddToCartButton";
-import { seedItems } from "@/lib/seeds";
 import ReviewsSection from "@/components/seeds/ReviewsSection";
-import { fetchProductById, formatPrice } from "@/services/products";
+import ReviewSummaryInline from "@/components/seeds/ReviewSummaryInline";
+import { fetchAllProducts, fetchProductById, formatPrice } from "@/services/products";
+import ProductGallery from "@/components/seeds/ProductGallery";
+import { seedItems } from "@/lib/seeds";
 
 const FALLBACK_FLAVOR = "Sweet · Fruity · Light Earthy";
-
-function getPriceCentsFromSeed(price?: string) {
-  if (!price) return 0;
-  const numeric = Number(price.replace("€", "").trim());
-  return Number.isNaN(numeric) ? 0 : Math.round(numeric * 100);
-}
 
 type SeedDetailProps = {
   params: { slug: string } | Promise<{ slug: string }>;
 };
 
+export async function generateStaticParams() {
+  try {
+    const products = await fetchAllProducts(undefined, {
+      cache: "force-cache",
+    });
+
+    const slugs = products
+      .map((product) => product.slug)
+      .filter((slug): slug is string => Boolean(slug));
+
+    if (slugs.length > 0) {
+      return slugs.map((slug) => ({ slug }));
+    }
+  } catch {}
+
+  return seedItems.map((item) => ({ slug: item.slug }));
+}
+
 export default async function SeedDetailPage({ params }: SeedDetailProps) {
   const resolvedParams = await params;
   const slug = resolvedParams.slug;
-
-  const seed = seedItems.find(
-    (item) => item.slug === slug || item.productId === slug,
-  );
 
   let product = null;
   try {
@@ -32,14 +42,14 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
     product = null;
   }
 
-  if (!seed && !product) {
+  if (!product) {
     return (
       <div className="bg-pr_dg text-pr_w">
         <section className="w-full px-4 pt-[120px] pb-20 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]">
           <p className="text-sm text-pr_w/70">
-            Seed not found.{" "}
-            <Link href="/seeds" className="text-pr_y">
-              Back to Seeds
+            Product not found.{" "}
+            <Link href="/products" className="text-pr_y">
+              Back to Products
             </Link>
           </p>
         </section>
@@ -47,53 +57,40 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
     );
   }
 
-  const productId = product?.id ?? seed?.productId ?? slug;
-  const title = product?.name ?? seed?.title ?? "Premium Seed";
-  const description =
-    product?.content?.description ??
-    seed?.description ??
-    "Premium product description.";
-  const categoryLabel = product?.category?.name ?? "Cannabis Seeds";
-  const rating = product?.ratingAvg ?? seed?.rating ?? 0;
-  const sold = product?.soldCount ?? seed?.sold ?? 0;
+  const productSlug = product.slug || slug;
+  const title = product.name;
+  const subtitle = product.content?.subtitle ?? "Premium product subtitle.";
+  const description = product.content?.description ?? "Premium product description.";
+  const categoryLabel = product.category?.name ?? "Cannabis Seeds";
+  const rating = product.ratingAvg ?? 0;
+  const sold = product.soldCount ?? 0;
 
   const sortedImages = product?.images
     ? [...product.images].sort((a, b) => a.sortOrder - b.sortOrder)
     : [];
-  const mainImage = sortedImages[0]?.url;
-  const thumbImages = sortedImages.slice(1, 4);
-
-  const priceCents =
-    product?.priceCents ?? getPriceCentsFromSeed(seed?.price);
-  const currency = product?.currency ?? "EUR";
+  const priceCents = product.priceCents ?? 0;
+  const currency = product.currency ?? "EUR";
 
   const priceDisplay = priceCents
     ? formatPrice(priceCents, currency)
-    : seed?.price ?? "€0";
+    : formatPrice(0, currency);
 
   const variants =
-    product?.content?.variants?.filter((variant) => variant.label) ?? [];
+    product.content?.variants?.filter((variant) => variant.label) ?? [];
   const variantPrices =
     variants.length > 0
       ? variants.map((variant) => ({
           label: variant.label,
-          price: formatPrice(variant.priceCents, currency),
+          price: formatPrice(variant.priceCents ?? 0, currency),
         }))
-      : [
-          { label: "1x", price: priceDisplay },
-          { label: "3x", price: formatPrice(priceCents * 3, currency) },
-          { label: "5x", price: formatPrice(priceCents * 5, currency) },
-        ];
+      : [{ label: "1x", price: priceDisplay }];
 
   const effects =
-    product?.content?.effects ??
-    seed?.effects ??
-    product?.content?.keyFacts ??
-    ["Premium Quality"];
+    product.content?.effects ??
+    product.content?.keyFacts ?? ["Premium Quality"];
 
   const sections =
-    seed?.sections ??
-    product?.content?.sections?.map((section) => ({
+    product.content?.sections?.map((section) => ({
       heading: section.title,
       body: [section.text],
     })) ?? [
@@ -105,7 +102,7 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
 
   const infoRows: Array<{ label: string; value: string }> = [];
 
-  const facts = product?.content?.facts;
+  const facts = product.content?.facts;
   if (facts?.flavorAroma) {
     infoRows.push({ label: "Flavor & Aroma", value: facts.flavorAroma });
   }
@@ -122,22 +119,7 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
     infoRows.push({ label: "Yield", value: facts.yield });
   }
 
-  if (!facts) {
-    if (seed?.thc) {
-      infoRows.push({ label: "THC Level", value: seed.thc });
-    }
-    if (seed?.seedType) {
-      infoRows.push({ label: "Seed Type", value: seed.seedType });
-    }
-    if (seed?.flowering && seed.flowering !== "N/A") {
-      infoRows.push({ label: "Flowering Cycle", value: seed.flowering });
-    }
-    if (seed?.yield && seed.yield !== "N/A") {
-      infoRows.push({ label: "Yield", value: seed.yield });
-    }
-  }
-
-  if (!seed && !facts && product?.content?.keyFacts?.length) {
+  if (!facts && product.content?.keyFacts?.length) {
     infoRows.push({
       label: "Key Facts",
       value: product.content.keyFacts.join(" · "),
@@ -148,7 +130,9 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
     infoRows.unshift({ label: "Flavor & Aroma", value: FALLBACK_FLAVOR });
   }
 
-  const geneticBalance = product?.content?.geneticBalance;
+  const geneticBalance = product.content?.geneticBalance;
+  const geneticDescription =
+    "This profile shows the cultivar's genetic ratio and expected growth character.";
   const indicaValue =
     geneticBalance?.indica ??
     geneticBalance?.abo ??
@@ -168,48 +152,30 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
             Home
           </Link>{" "}
           /{" "}
-          <Link href="/seeds" className="hover:text-pr_w">
-            Cannabis Seeds
+          <Link href="/products" className="hover:text-pr_w">
+            All Products
           </Link>{" "}
           / {title}
         </p>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_1fr]">
           <div>
-            {mainImage ? (
-              <img
-                src={mainImage}
-                alt={title}
-                className="h-[320px] w-full rounded-2xl object-cover sm:h-[420px]"
-              />
-            ) : (
-              <div className="h-[320px] w-full rounded-2xl bg-pr_w sm:h-[420px]" />
-            )}
-            <div className="mt-4 flex gap-4">
-              {thumbImages.length > 0
-                ? thumbImages.map((image) => (
-                    <img
-                      key={image.id}
-                      src={image.url}
-                      alt=""
-                      className="h-16 w-16 rounded-xl object-cover"
-                    />
-                  ))
-                : [0, 1, 2].map((index) => (
-                    <div key={index} className="h-16 w-16 rounded-xl bg-pr_w" />
-                  ))}
-            </div>
+            <ProductGallery title={title} images={sortedImages} />
           </div>
 
           <div className="rounded-2xl bg-pr_w p-6 text-pr_dg">
             <div className="flex items-center justify-between text-xs text-pr_dg/60">
               <span>{categoryLabel}</span>
               <span>
-                {sold} Sold • {rating.toFixed(1)}★
+                {sold} Sold •{" "}
+                <ReviewSummaryInline
+                  productId={productSlug}
+                  fallbackRating={rating}
+                />
               </span>
             </div>
             <h1 className="mt-2 text-2xl font-semibold">{title}</h1>
-            <p className="mt-2 text-xs text-pr_dg/70">{description}</p>
+            <p className="mt-2 text-xs text-pr_dg/70">{subtitle}</p>
 
             <div className="mt-4">
               <p className="text-xs font-semibold">Number of seeds:</p>
@@ -241,7 +207,7 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
             </div>
 
             <AddToCartButton
-              productId={productId}
+              productId={productSlug}
               variant="primary"
               className="mt-5 w-full"
             />
@@ -266,9 +232,10 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
             ))}
           </div>
 
-          <div className="rounded-2xl bg-pr_w p-6 text-pr_dg">
+          <div className="rounded-2xl bg-pr_w p-6 text-pr_dg flex h-full flex-col">
             <h2 className="text-sm font-semibold">Genetic Balance</h2>
-            <div className="mt-4 space-y-3 text-xs">
+            <p className="mt-2 text-xs text-pr_dg/70">{geneticDescription}</p>
+            <div className="mt-auto pt-4 space-y-3 text-xs">
               <div>
                 <div className="flex justify-between">
                   <span>Indica</span>
@@ -297,7 +264,7 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
           </div>
         </div>
 
-        <ReviewsSection productId={productId} />
+        <ReviewsSection productId={productSlug} />
       </section>
     </div>
   );

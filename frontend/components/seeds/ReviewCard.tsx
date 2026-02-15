@@ -6,6 +6,7 @@ type ReviewCardProps = {
   createdAt?: string;
   isMine?: boolean;
   onDelete?: () => void;
+  onOpen?: () => void;
 };
 
 export default function ReviewCard({
@@ -16,11 +17,27 @@ export default function ReviewCard({
   createdAt,
   isMine,
   onDelete,
+  onOpen,
 }: ReviewCardProps) {
   const visibleImages = images.slice(0, 3);
 
   return (
-    <div className="rounded-2xl bg-pr_w p-5 text-pr_dg">
+    <div
+      role={onOpen ? "button" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (!onOpen) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+      className={
+        "rounded-2xl bg-pr_w p-5 text-pr_dg" +
+        (onOpen ? " cursor-pointer transition hover:shadow-sm" : "")
+      }
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <span className="h-5 w-5 rounded-full bg-sr_dg" />
@@ -30,7 +47,10 @@ export default function ReviewCard({
           {isMine && onDelete ? (
             <button
               type="button"
-              onClick={onDelete}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete();
+              }}
               className="text-xs text-pr_dr"
             >
               Delete

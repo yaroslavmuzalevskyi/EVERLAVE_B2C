@@ -30,17 +30,26 @@ export type ReviewSummary = {
   reviewCount: number;
 };
 
+function normalizeProductRef(productRef: string) {
+  return productRef.trim();
+}
+
 export async function fetchReviews(
   productId: string,
   page: number,
   limit: number,
 ) {
+  const normalizedProductRef = normalizeProductRef(productId);
+  if (!normalizedProductRef) {
+    throw new Error("Product reference is required");
+  }
+  const resolvedProductId = encodeURIComponent(normalizedProductRef);
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit),
   });
   const response = await apiFetch(
-    `/products/${productId}/reviews?${params.toString()}`,
+    `/products/${resolvedProductId}/reviews?${params.toString()}`,
   );
 
   if (!response.ok) {
@@ -51,7 +60,14 @@ export async function fetchReviews(
 }
 
 export async function fetchReviewSummary(productId: string) {
-  const response = await apiFetch(`/products/${productId}/reviews/summary`);
+  const normalizedProductRef = normalizeProductRef(productId);
+  if (!normalizedProductRef) {
+    throw new Error("Product reference is required");
+  }
+  const resolvedProductId = encodeURIComponent(normalizedProductRef);
+  const response = await apiFetch(
+    `/products/${resolvedProductId}/reviews/summary`,
+  );
 
   if (!response.ok) {
     throw new Error("Failed to load review summary");
@@ -64,15 +80,25 @@ export async function createReview(
   productId: string,
   data: { rating: number; text?: string; images?: string[] },
 ) {
-  const response = await apiFetch(`/products/${productId}/reviews`, {
+  const normalizedProductRef = normalizeProductRef(productId);
+  if (!normalizedProductRef) {
+    throw new Error("Product reference is required");
+  }
+  const resolvedProductId = encodeURIComponent(normalizedProductRef);
+  const response = await apiFetch(`/products/${resolvedProductId}/reviews`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error?.message || "Failed to submit review");
+    const error = (await response.json().catch(() => ({}))) as {
+      message?: string;
+      error?: string;
+    };
+    throw new Error(
+      error?.message || error?.error || `Failed to submit review (${response.status})`,
+    );
   }
 
   return response.json();
@@ -84,8 +110,13 @@ export async function deleteReview(reviewId: string) {
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error?.message || "Failed to delete review");
+    const error = (await response.json().catch(() => ({}))) as {
+      message?: string;
+      error?: string;
+    };
+    throw new Error(
+      error?.message || error?.error || `Failed to delete review (${response.status})`,
+    );
   }
 
   return response.json() as Promise<{ success: boolean }>;

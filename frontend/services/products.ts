@@ -12,9 +12,22 @@ export type ProductCategory = {
 
 export type ProductListItem = {
   id: string;
+  slug?: string;
   name: string;
   content?: {
     description?: string;
+    subtitle?: string;
+    facts?: {
+      yield?: string;
+      seedType?: string;
+      thcLevel?: string;
+      flavorAroma?: string;
+      floweringCycle?: string;
+      [key: string]: string | undefined;
+    };
+    effects?: string[];
+    variants?: Array<{ label?: string; priceCents?: number }>;
+    geneticBalance?: Record<string, number | undefined>;
   };
   priceCents: number;
   currency: string;
@@ -24,6 +37,9 @@ export type ProductListItem = {
   soldCount?: number;
   ratingAvg?: number;
   reviewCount?: number;
+  filters?: Record<string, string>;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type ProductListResponse = {
@@ -38,6 +54,7 @@ export type ProductDetails = ProductListItem & {
     description?: string;
     keyFacts?: string[];
     sections?: Array<{ title: string; text: string }>;
+    subtitle?: string;
     facts?: {
       yield?: string;
       seedType?: string;
@@ -65,12 +82,15 @@ export type ProductQuery = {
   minPrice?: number;
   maxPrice?: number;
   sort?: string;
+  filters?: Record<string, string | number | undefined>;
 };
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  "";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "";
+
+function getBaseUrl() {
+  return API_BASE_URL;
+}
 
 export function formatPrice(priceCents: number, currency = "EUR") {
   return new Intl.NumberFormat("en-US", {
@@ -98,12 +118,17 @@ type RawProduct = {
   id?: string;
   _id?: string;
   uuid?: string;
+  productId?: string;
+  product_id?: string;
+  product?: { id?: string; uuid?: string };
+  slug?: string;
   name?: string;
   title?: string;
   content?: {
     description?: string;
     keyFacts?: string[];
     sections?: Array<{ title?: string; text?: string }>;
+    subtitle?: string;
     facts?: {
       yield?: string;
       seedType?: string;
@@ -136,9 +161,75 @@ type RawProduct = {
   rating?: number;
   reviewCount?: number;
   reviews?: number;
+  filters?: Record<string, string>;
   createdAt?: string;
   updatedAt?: string;
 };
+
+function getFilterValue(
+  filters: Record<string, string> | undefined,
+  keys: string[],
+) {
+  if (!filters) return undefined;
+  const entries = Object.entries(filters);
+  const match = entries.find(([key]) =>
+    keys.some((candidate) => key.toLowerCase() === candidate.toLowerCase()),
+  );
+  const value = match?.[1]?.trim();
+  return value || undefined;
+}
+
+function getFirstNumericValue(value?: string) {
+  if (!value) return undefined;
+  const match = value.match(/-?\d+(\.\d+)?/);
+  if (!match) return undefined;
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function normalizeFactsFromFilters(filters?: Record<string, string>) {
+  if (!filters) return undefined;
+
+  const thcLevel = getFilterValue(filters, ["THC %", "THC"]);
+  const yieldValue = getFilterValue(filters, ["Yield g/m²", "Yield"]);
+  const floweringCycle = getFilterValue(filters, [
+    "Seed to Harvest (weeks)",
+    "Flowering Cycle",
+    "Cycle",
+  ]);
+  const seedType = getFilterValue(filters, ["Seed Type", "Type"]);
+
+  if (!thcLevel && !yieldValue && !floweringCycle && !seedType) {
+    return undefined;
+  }
+
+  return {
+    thcLevel,
+    yield: yieldValue,
+    floweringCycle,
+    seedType,
+  };
+}
+
+function normalizeGeneticBalanceFromFilters(filters?: Record<string, string>) {
+  if (!filters) return undefined;
+
+  const indica = getFirstNumericValue(
+    getFilterValue(filters, ["Indica %", "Indica"]),
+  );
+  const sativa = getFirstNumericValue(
+    getFilterValue(filters, ["Sativa %", "Sativa"]),
+  );
+
+  if (indica === undefined && sativa === undefined) {
+    return undefined;
+  }
+
+  return {
+    ...(indica !== undefined ? { indica, ba: indica } : {}),
+    ...(sativa !== undefined ? { sativa, abo: sativa } : {}),
+  };
+}
 
 function normalizeCurrency(raw: RawProduct) {
   return raw.currency || "EUR";
@@ -207,6 +298,7 @@ function normalizeContent(raw: RawProduct) {
     raw.description ||
     raw.shortDescription ||
     raw.summary;
+  const subtitle = raw.content?.subtitle;
   const keyFacts = raw.content?.keyFacts;
   const sections = raw.content?.sections
     ?.filter((section) => section.title || section.text)
@@ -234,6 +326,7 @@ function normalizeContent(raw: RawProduct) {
     description,
     keyFacts,
     sections,
+    subtitle,
     facts,
     effects,
     variants: variants?.map((variant) => ({
@@ -245,13 +338,49 @@ function normalizeContent(raw: RawProduct) {
 }
 
 function normalizeProduct(raw: RawProduct): ProductDetails {
-  const id = raw.id || raw._id || raw.uuid || "";
+  const id =
+    raw.id ||
+    raw._id ||
+    raw.uuid ||
+    raw.productId ||
+    raw.product_id ||
+    raw.product?.id ||
+    raw.product?.uuid ||
+    raw.slug ||
+    "";
+  const slug = raw.slug;
   const name = raw.name || raw.title || "Product";
+
+  const normalizedContent = normalizeContent(raw);
+  const factsFromFilters = normalizeFactsFromFilters(raw.filters);
+  const balanceFromFilters = normalizeGeneticBalanceFromFilters(raw.filters);
+
+  const mergedContent =
+    normalizedContent || factsFromFilters || balanceFromFilters
+      ? {
+          ...(normalizedContent ?? {}),
+          facts:
+            normalizedContent?.facts || factsFromFilters
+              ? {
+                  ...(normalizedContent?.facts ?? {}),
+                  ...(factsFromFilters ?? {}),
+                }
+              : undefined,
+          geneticBalance:
+            normalizedContent?.geneticBalance || balanceFromFilters
+              ? {
+                  ...(normalizedContent?.geneticBalance ?? {}),
+                  ...(balanceFromFilters ?? {}),
+                }
+              : undefined,
+        }
+      : undefined;
 
   return {
     id,
+    slug,
     name,
-    content: normalizeContent(raw),
+    content: mergedContent,
     priceCents: normalizePriceCents(raw),
     currency: normalizeCurrency(raw),
     stockQty: raw.stockQty ?? raw.stock,
@@ -260,6 +389,7 @@ function normalizeProduct(raw: RawProduct): ProductDetails {
     soldCount: raw.soldCount ?? raw.sold,
     ratingAvg: raw.ratingAvg ?? raw.rating,
     reviewCount: raw.reviewCount ?? raw.reviews,
+    filters: raw.filters ?? undefined,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
@@ -281,7 +411,14 @@ function normalizeListResponse(data: unknown): ProductListResponse {
         limit?: number;
         total?: number;
         items?: RawProduct[];
-        data?: RawProduct[] | { items?: RawProduct[]; total?: number; page?: number; limit?: number };
+        data?:
+          | RawProduct[]
+          | {
+              items?: RawProduct[];
+              total?: number;
+              page?: number;
+              limit?: number;
+            };
         meta?: { total?: number; page?: number; limit?: number };
       }
     | undefined;
@@ -335,8 +472,14 @@ export async function fetchProducts(
   if (query.maxPrice !== undefined)
     params.set("maxPrice", String(query.maxPrice));
   if (query.sort) params.set("sort", query.sort);
+  if (query.filters) {
+    Object.entries(query.filters).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === "") return;
+      params.set(key, String(value));
+    });
+  }
 
-  const response = await fetch(`${API_BASE_URL}/products?${params.toString()}`, {
+  const response = await fetch(`${getBaseUrl()}/products?${params.toString()}`, {
     ...init,
   });
 
@@ -348,8 +491,40 @@ export async function fetchProducts(
   return normalizeListResponse(data);
 }
 
-export async function fetchProductById(id: string, init?: FetchInit) {
-  const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+export async function fetchAllProducts(
+  query?: Omit<ProductQuery, "page" | "limit">,
+  init?: FetchInit,
+): Promise<ProductListItem[]> {
+  const limit = 32;
+  let page = 1;
+  let total = 0;
+  const items: ProductListItem[] = [];
+
+  do {
+    const response = await fetchProducts(
+      {
+        page,
+        limit,
+        q: query?.q,
+        category: query?.category,
+        minPrice: query?.minPrice,
+        maxPrice: query?.maxPrice,
+        sort: query?.sort,
+        filters: query?.filters,
+      },
+      init,
+    );
+
+    items.push(...response.items);
+    total = response.total;
+    page += 1;
+  } while (items.length < total);
+
+  return items;
+}
+
+export async function fetchProductById(slug: string, init?: FetchInit) {
+  const response = await fetch(`${getBaseUrl()}/products/${slug}`, {
     ...init,
   });
 

@@ -1,6 +1,6 @@
 export type NavDropdownItem = {
   label: string;
-  href: string;
+  href?: string;
   external?: boolean;
 };
 

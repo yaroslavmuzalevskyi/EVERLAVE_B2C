@@ -2,12 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import FilterDropdown from "@/components/seeds/FilterDropdown";
-import FilterToggle from "@/components/seeds/FilterToggle";
 import ProductCard from "@/components/ui/ProductCard";
-import { seedItems } from "@/lib/seeds";
-import { fetchProducts, formatPrice, getPrimaryImageUrl } from "@/services/products";
+import {
+  fetchCategories,
+  fetchCategoryFilters,
+  type CategoryFilter,
+  type CategoryItem,
+} from "@/services/categories";
+import {
+  fetchAllProducts,
+  formatPrice,
+  getPrimaryImageUrl,
+} from "@/services/products";
 
 const filterOptions = {
   sorting: [
@@ -15,35 +23,12 @@ const filterOptions = {
     { label: "Price: Low to High", value: "price-asc" },
     { label: "Price: High to Low", value: "price-desc" },
   ],
-  price: [
-    { label: "€0 - €25", value: "0-25" },
-    { label: "€25 - €50", value: "25-50" },
-    { label: "€50+", value: "50+" },
-  ],
-  seedType: [
-    { label: "Feminized", value: "feminized" },
-    { label: "Autoflower", value: "autoflower" },
-    { label: "N/A", value: "na" },
-  ],
-  flowering: [
-    { label: "Up to 8 weeks", value: "up-8" },
-    { label: "8–10 weeks", value: "8-10" },
-    { label: "10+ weeks", value: "10+" },
-  ],
-  thc: [
-    { label: "Low", value: "low" },
-    { label: "Medium", value: "medium" },
-    { label: "High", value: "high" },
-  ],
-  yield: [
-    { label: "400–500 g/m²", value: "400-500" },
-    { label: "500–650 g/m²", value: "500-650" },
-    { label: "650+ g/m²", value: "650+" },
-  ],
+  price: [],
 };
 
 type SeedCardItem = {
   productId?: string;
+  slug?: string;
   title: string;
   description: string;
   price: string;
@@ -51,6 +36,18 @@ type SeedCardItem = {
   category?: string;
   priceValue?: number;
   text?: string;
+  createdAt?: string;
+  soldCount?: number;
+  filters?: Record<string, string>;
+  facts?: {
+    yield?: string;
+    seedType?: string;
+    thcLevel?: string;
+    floweringCycle?: string;
+    flavorAroma?: string;
+    [key: string]: string | undefined;
+  };
+  geneticBalance?: Record<string, number | undefined>;
 };
 
 const sortMap: Record<string, string | undefined> = {
@@ -69,38 +66,141 @@ function getTextValue(item: SeedCardItem) {
   return `${item.title} ${item.description}`.toLowerCase();
 }
 
-const fallbackItems: SeedCardItem[] = seedItems.map((seed) => ({
-  productId: seed.productId ?? seed.slug,
-  title: seed.title,
-  description: seed.description,
-  price: seed.price,
-  priceValue: getPriceValue(seed.price),
-  category: seed.category,
-  text: `${seed.title} ${seed.description} ${seed.seedType} ${seed.thc} ${seed.yield} ${seed.flowering}`.toLowerCase(),
-}));
+function toTitleCase(value: string) {
+  return value
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function slugifyFilterKey(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function extractNumbers(value?: string | number) {
+  if (typeof value === "number") return [value];
+  if (!value) return [];
+  const matches = value.match(/(\d+(\.\d+)?)/g);
+  if (!matches) return [];
+  return matches.map((match) => Number(match)).filter((num) => Number.isFinite(num));
+}
+
+function toRange(value?: string | number) {
+  const numbers = extractNumbers(value);
+  if (numbers.length === 0) return undefined;
+  if (numbers.length === 1) return { min: numbers[0], max: numbers[0] };
+  return { min: Math.min(...numbers), max: Math.max(...numbers) };
+}
+
+function getFilterRange(item: SeedCardItem, slug: string) {
+  const facts = item.facts;
+  const balance = item.geneticBalance ?? {};
+
+  if (slug === "thc") return toRange(facts?.thcLevel);
+  if (slug === "yield") return toRange(facts?.yield);
+  if (slug === "cycle") return toRange(facts?.floweringCycle);
+  if (slug === "height") return toRange(facts?.height ?? facts?.plantHeight);
+  if (slug === "indica")
+    return toRange(
+      balance.indica ?? balance["ba"] ?? balance["indica"] ?? balance["Indica"],
+    );
+  if (slug === "sativa")
+    return toRange(
+      balance.sativa ?? balance["abo"] ?? balance["sativa"] ?? balance["Sativa"],
+    );
+
+  const fallback =
+    facts?.[slug] ??
+    (typeof balance[slug] === "number" ? balance[slug] : undefined);
+  return toRange(fallback);
+}
+
+const selectorOptionsBySlug: Record<
+  string,
+  Array<{ label: string; min?: number; max?: number }>
+> = {
+  thc: [
+    { label: "0–10%", min: 0, max: 10 },
+    { label: "10–20%", min: 10, max: 20 },
+    { label: "20–30%", min: 20, max: 30 },
+    { label: "30%+", min: 30 },
+  ],
+  yield: [
+    { label: "0–400 g/m²", min: 0, max: 400 },
+    { label: "400–500 g/m²", min: 400, max: 500 },
+    { label: "500–650 g/m²", min: 500, max: 650 },
+    { label: "650+ g/m²", min: 650 },
+  ],
+  height: [
+    { label: "0–60 cm", min: 0, max: 60 },
+    { label: "60–120 cm", min: 60, max: 120 },
+    { label: "120–180 cm", min: 120, max: 180 },
+    { label: "180+ cm", min: 180 },
+  ],
+  cycle: [
+    { label: "0–8 weeks", min: 0, max: 8 },
+    { label: "8–10 weeks", min: 8, max: 10 },
+    { label: "10–12 weeks", min: 10, max: 12 },
+    { label: "12+ weeks", min: 12 },
+  ],
+  indica: [
+    { label: "0–40%", min: 0, max: 40 },
+    { label: "40–60%", min: 40, max: 60 },
+    { label: "60–100%", min: 60, max: 100 },
+  ],
+  sativa: [
+    { label: "0–40%", min: 0, max: 40 },
+    { label: "40–60%", min: 40, max: 60 },
+    { label: "60–100%", min: 60, max: 100 },
+  ],
+};
 
 export default function SeedsPage() {
-  const searchParams = useSearchParams();
+  const router = useRouter();
   const [openFilter, setOpenFilter] = useState<string | null>(null);
   const [sorting, setSorting] = useState("");
-  const [priceFilter, setPriceFilter] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [seedTypeFilter, setSeedTypeFilter] = useState("");
-  const [floweringFilter, setFloweringFilter] = useState("");
-  const [thcFilter, setThcFilter] = useState("");
-  const [yieldFilter, setYieldFilter] = useState("");
-  const [outdoorOnly, setOutdoorOnly] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [items, setItems] = useState<SeedCardItem[]>(
-    fallbackItems.slice(0, 8),
+  const [search, setSearch] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [categorySelection, setCategorySelection] = useState("");
+  const [categoryFilters, setCategoryFilters] = useState<CategoryFilter[]>([]);
+  const [filtersLoading, setFiltersLoading] = useState(false);
+  const [filtersError, setFiltersError] = useState("");
+  const [filterValues, setFilterValues] = useState<
+    Record<string, { min?: string; max?: string }>
+  >({});
+  const [filterSelections, setFilterSelections] = useState<Record<string, string>>(
+    {},
   );
-  const [total, setTotal] = useState(fallbackItems.length);
-  const [loading, setLoading] = useState(false);
+  const [multiSelections, setMultiSelections] = useState<Record<string, string[]>>(
+    {},
+  );
+  const [currentPage, setCurrentPage] = useState(1);
+  const [items, setItems] = useState<SeedCardItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const pageSize = 8;
+  const [categoryParam, setCategoryParam] = useState("");
+  const filterKey = useMemo(() => JSON.stringify(filterValues), [filterValues]);
+  const pageTitle = categoryParam ? toTitleCase(categoryParam) : "All Products";
+  const breadcrumbLabel = categoryParam ? pageTitle : "All Categories";
 
-  const categoryParam = searchParams?.get("category")?.toLowerCase() ?? "";
+  useEffect(() => {
+    const syncCategoryFromUrl = () => {
+      const value =
+        new URLSearchParams(window.location.search).get("category")?.toLowerCase() ??
+        "";
+      setCategoryParam(value);
+    };
+
+    syncCategoryFromUrl();
+    window.addEventListener("popstate", syncCategoryFromUrl);
+    return () => window.removeEventListener("popstate", syncCategoryFromUrl);
+  }, []);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -114,29 +214,120 @@ export default function SeedsPage() {
   }, []);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchQuery(search.trim());
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchCategories()
+      .then((data) => {
+        if (!mounted) return;
+        setCategories(data);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setCategories([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setCategorySelection(categoryParam);
+  }, [categoryParam]);
+
+
+  useEffect(() => {
+    let mounted = true;
+    if (!categoryParam) {
+      setCategoryFilters([]);
+      setFilterValues({});
+      setFilterSelections({});
+      setMultiSelections({});
+      setFiltersError("");
+      setFiltersLoading(false);
+      return;
+    }
+
+    setFiltersLoading(true);
+    setFiltersError("");
+    fetchCategoryFilters(categoryParam)
+      .then((filters) => {
+        if (!mounted) return;
+        setCategoryFilters(filters);
+        setFiltersError("");
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setCategoryFilters([]);
+        setFiltersError("No filters available for this category.");
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setFiltersLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [categoryParam]);
+
+  useEffect(() => {
     setCurrentPage(1);
   }, [
     sorting,
-    priceFilter,
     minPrice,
     maxPrice,
-    seedTypeFilter,
-    floweringFilter,
-    thcFilter,
-    yieldFilter,
-    outdoorOnly,
+    searchQuery,
     categoryParam,
+    filterKey,
+    filterSelections,
+    multiSelections,
   ]);
 
+  const filterOptionsBySlug = useMemo(() => {
+    const optionsMap: Record<string, Set<string>> = {};
+    categoryFilters.forEach((filter) => {
+      optionsMap[filter.slug] = new Set<string>();
+    });
+
+    items.forEach((item) => {
+      const filters = item.filters ?? {};
+      Object.entries(filters).forEach(([key, rawValue]) => {
+        const slug = slugifyFilterKey(key);
+        if (!(slug in optionsMap)) return;
+        const value = rawValue?.toString().trim();
+        if (!value || value.toLowerCase() === "n/a") return;
+        if (value.includes(",")) {
+          value
+            .split(",")
+            .map((entry) => entry.trim())
+            .filter(Boolean)
+            .forEach((entry) => optionsMap[slug].add(entry));
+        } else {
+          optionsMap[slug].add(value);
+        }
+      });
+    });
+
+    return Object.fromEntries(
+      Object.entries(optionsMap).map(([slug, set]) => [
+        slug,
+        Array.from(set),
+      ]),
+    );
+  }, [items, categoryFilters]);
+
   const priceRange = useMemo(() => {
-    if (priceFilter === "0-25") return { min: 0, max: 25 };
-    if (priceFilter === "25-50") return { min: 25, max: 50 };
-    if (priceFilter === "50+") return { min: 50, max: undefined };
     return {
       min: minPrice ? Number(minPrice) : undefined,
       max: maxPrice ? Number(maxPrice) : undefined,
     };
-  }, [priceFilter, minPrice, maxPrice]);
+  }, [minPrice, maxPrice]);
 
   useEffect(() => {
     let isMounted = true;
@@ -145,9 +336,42 @@ export default function SeedsPage() {
       setLoading(true);
       setError("");
       try {
-        const response = await fetchProducts({
-          page: currentPage,
-          limit: pageSize,
+        const filtersQuery: Record<string, string | number | undefined> = {};
+
+        if (categoryFilters.length > 0) {
+          categoryFilters.forEach((filter) => {
+            const slug = filter.slug;
+            if (filter.type === "range" || filter.type === "number") {
+              const value = filterValues[slug];
+              if (value?.min) filtersQuery[`${slug}Min`] = value.min;
+              if (value?.max) filtersQuery[`${slug}Max`] = value.max;
+              return;
+            }
+
+            if (filter.type === "multi") {
+              const selectedValues = multiSelections[slug];
+              if (selectedValues && selectedValues.length > 0) {
+                filtersQuery[slug] = selectedValues.join(",");
+              }
+              return;
+            }
+
+            const selectedValue = filterSelections[slug];
+            if (selectedValue) {
+              if (filter.type === "boolean") {
+                const normalized = selectedValue.toLowerCase();
+                filtersQuery[slug] =
+                  normalized === "yes" || normalized === "true" ? "true" : "false";
+              } else {
+                filtersQuery[slug] = selectedValue;
+              }
+            }
+          });
+        }
+
+        const items = await fetchAllProducts({
+          q: searchQuery || undefined,
+          category: categoryParam || undefined,
           sort: sortMap[sorting],
           minPrice:
             priceRange.min !== undefined
@@ -157,13 +381,14 @@ export default function SeedsPage() {
             priceRange.max !== undefined
               ? Math.round(priceRange.max * 100)
               : undefined,
-          category: categoryParam || (outdoorOnly ? "outdoor" : undefined),
+          filters: filtersQuery,
         });
 
         if (!isMounted) return;
 
-        const mapped = response.items.map((item) => ({
-          productId: item.id,
+        const mapped = items.map((item) => ({
+          productId: item.slug || item.id,
+          slug: item.slug || item.id,
           title: item.name,
           description: item.content?.description ?? "Premium product",
           price: formatPrice(item.priceCents, item.currency),
@@ -171,19 +396,20 @@ export default function SeedsPage() {
           category: item.category?.slug ?? item.category?.name,
           priceValue: item.priceCents / 100,
           text: `${item.name} ${item.content?.description ?? ""}`.toLowerCase(),
+          createdAt: item.createdAt,
+          soldCount: item.soldCount ?? 0,
+          facts: item.content?.facts,
+          geneticBalance: item.content?.geneticBalance,
+          filters: item.filters,
         }));
 
         setItems(mapped);
-        setTotal(response.total);
+        setTotal(mapped.length);
       } catch {
         if (!isMounted) return;
-        const fallbackPage = fallbackItems.slice(
-          (currentPage - 1) * pageSize,
-          currentPage * pageSize,
-        );
-        setItems(fallbackPage);
-        setTotal(fallbackItems.length);
-        setError("Failed to load products. Showing offline data.");
+        setItems([]);
+        setTotal(0);
+        setError("Failed to load products.");
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -194,126 +420,46 @@ export default function SeedsPage() {
     return () => {
       isMounted = false;
     };
-  }, [currentPage, pageSize, sorting, priceRange, outdoorOnly, categoryParam]);
-
-  const filteredItems = useMemo(() => {
-    let filtered = [...items];
-
-    if (categoryParam) {
-      filtered = filtered.filter((item) => {
-        const category = item.category?.toLowerCase() ?? "";
-        return category.includes(categoryParam);
-      });
-    } else if (outdoorOnly) {
-      filtered = filtered.filter((item) => {
-        const category = item.category?.toLowerCase() ?? "";
-        return category.includes("outdoor") || getTextValue(item).includes("outdoor");
-      });
-    }
-
-    if (priceFilter) {
-      filtered = filtered.filter((item) => {
-        const value = item.priceValue ?? getPriceValue(item.price);
-        if (priceFilter === "0-25") return value <= 25;
-        if (priceFilter === "25-50") return value > 25 && value <= 50;
-        if (priceFilter === "50+") return value > 50;
-        return true;
-      });
-    }
-
-    if (priceRange.min !== undefined || priceRange.max !== undefined) {
-      filtered = filtered.filter((item) => {
-        const value = item.priceValue ?? getPriceValue(item.price);
-        const min = priceRange.min ?? 0;
-        const max = priceRange.max ?? Infinity;
-        return value >= min && value <= max;
-      });
-    }
-
-    if (seedTypeFilter) {
-      filtered = filtered.filter((item) => {
-        const text = getTextValue(item);
-        if (seedTypeFilter === "feminized") return text.includes("feminized");
-        if (seedTypeFilter === "autoflower")
-          return text.includes("autoflower") || text.includes("auto");
-        if (seedTypeFilter === "na")
-          return !text.includes("feminized") && !text.includes("autoflower");
-        return true;
-      });
-    }
-
-    if (floweringFilter) {
-      filtered = filtered.filter((item) => {
-        const text = getTextValue(item);
-        if (floweringFilter === "up-8") return text.includes("8");
-        if (floweringFilter === "8-10")
-          return text.includes("8") || text.includes("9") || text.includes("10");
-        if (floweringFilter === "10+") return text.includes("10");
-        return true;
-      });
-    }
-
-    if (thcFilter) {
-      filtered = filtered.filter((item) => {
-        const text = getTextValue(item);
-        if (thcFilter === "low") return text.includes("low") || text.includes("0%");
-        if (thcFilter === "medium") return text.includes("medium");
-        if (thcFilter === "high") return text.includes("high");
-        return true;
-      });
-    }
-
-    if (yieldFilter) {
-      filtered = filtered.filter((item) => {
-        const text = getTextValue(item);
-        if (yieldFilter === "400-500") return text.includes("400") || text.includes("500");
-        if (yieldFilter === "500-650") return text.includes("500") || text.includes("650");
-        if (yieldFilter === "650+") return text.includes("650");
-        return true;
-      });
-    }
-
-    if (sorting === "price-asc") {
-      filtered.sort(
-        (a, b) =>
-          (a.priceValue ?? getPriceValue(a.price)) -
-          (b.priceValue ?? getPriceValue(b.price)),
-      );
-    } else if (sorting === "price-desc") {
-      filtered.sort(
-        (a, b) =>
-          (b.priceValue ?? getPriceValue(b.price)) -
-          (a.priceValue ?? getPriceValue(a.price)),
-      );
-    }
-
-    return filtered;
   }, [
-    items,
-    outdoorOnly,
-    categoryParam,
-    priceFilter,
-    priceRange,
-    seedTypeFilter,
-    floweringFilter,
-    thcFilter,
-    yieldFilter,
     sorting,
+    priceRange,
+    categoryParam,
+    searchQuery,
+    categoryFilters,
+    filterValues,
+    filterSelections,
+    multiSelections,
   ]);
 
-  const clientFilterActive = Boolean(
-    seedTypeFilter || floweringFilter || thcFilter || yieldFilter,
-  );
+  const filteredItems = items;
 
-  const totalPages = clientFilterActive
-    ? 1
-    : Math.max(1, Math.ceil(total / pageSize));
+  const showSkeletons = loading && items.length === 0;
 
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+  const orderedItems = useMemo(() => {
+    if (filteredItems.length === 0) return [];
+
+    const byDate = [...filteredItems].sort((a, b) => {
+      const aDate = a.createdAt ? Date.parse(a.createdAt) : 0;
+      const bDate = b.createdAt ? Date.parse(b.createdAt) : 0;
+      return bDate - aDate;
+    });
+    const newest = byDate.slice(0, 4);
+
+    const remainingAfterNew = filteredItems.filter(
+      (item) => !newest.some((newItem) => newItem.productId === item.productId),
+    );
+    const popular = [...remainingAfterNew]
+      .sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
+      .slice(0, 4);
+
+    const rest = remainingAfterNew.filter(
+      (item) => !popular.some((popItem) => popItem.productId === item.productId),
+    );
+
+    return [...newest, ...popular, ...rest];
+  }, [filteredItems]);
+
+  const totalPages = 1;
 
   return (
     <div className="bg-pr_dg text-pr_w">
@@ -323,13 +469,40 @@ export default function SeedsPage() {
             Home
           </Link>{" "}
           /{" "}
-          <Link href="/seeds" className="hover:text-pr_w">
-            Cannabis Seeds
+          <Link href="/products" className="hover:text-pr_w">
+            {breadcrumbLabel}
           </Link>
         </p>
-        <h1 className="mt-2 text-3xl font-semibold">Cannabis Seeds</h1>
+        <h1 className="mt-2 text-3xl font-semibold">{pageTitle}</h1>
 
         <div className="mt-4 flex flex-wrap gap-2" data-filter-root>
+          <FilterDropdown
+            id="category"
+            label="Category"
+            options={[
+              { label: "All Categories", value: "" },
+              ...categories.map((category) => ({
+                label: category.name,
+                value: category.slug,
+              })),
+            ]}
+            selected={categorySelection}
+            open={openFilter === "category"}
+            onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
+            onSelect={(id, value) => {
+              setCategorySelection(value);
+              const params = new URLSearchParams(window.location.search);
+              if (value) {
+                params.set("category", value);
+              } else {
+                params.delete("category");
+              }
+              setCategoryParam(value.toLowerCase());
+              router.push(`/products${params.toString() ? `?${params}` : ""}`);
+              setOpenFilter(null);
+            }}
+            placeholder="Category"
+          />
           <FilterDropdown
             id="sorting"
             label="Sorting"
@@ -347,87 +520,256 @@ export default function SeedsPage() {
             id="price"
             label="Price"
             options={filterOptions.price}
-            selected={priceFilter}
+            selected=""
             open={openFilter === "price"}
             onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
-            onSelect={(id, value) => {
-              setPriceFilter(value);
-              if (value) {
-                setMinPrice("");
-                setMaxPrice("");
-              }
-              setOpenFilter(null);
-            }}
+            onSelect={() => null}
             placeholder="Price"
             variant="price"
             minPrice={minPrice}
             maxPrice={maxPrice}
             onMinPriceChange={(value) => {
               setMinPrice(value);
-              setPriceFilter("");
             }}
             onMaxPriceChange={(value) => {
               setMaxPrice(value);
-              setPriceFilter("");
             }}
           />
-          <FilterDropdown
-            id="seedType"
-            label="Seed Type"
-            options={filterOptions.seedType}
-            selected={seedTypeFilter}
-            open={openFilter === "seedType"}
-            onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
-            onSelect={(id, value) => {
-              setSeedTypeFilter(value);
-              setOpenFilter(null);
-            }}
-            placeholder="Seed Type"
-          />
-          <FilterToggle
-            label="Outdoor"
-            active={outdoorOnly}
-            onToggle={() => setOutdoorOnly((prev) => !prev)}
-          />
-          <FilterDropdown
-            id="flowering"
-            label="Flowering Time"
-            options={filterOptions.flowering}
-            selected={floweringFilter}
-            open={openFilter === "flowering"}
-            onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
-            onSelect={(id, value) => {
-              setFloweringFilter(value);
-              setOpenFilter(null);
-            }}
-            placeholder="Flowering Time"
-          />
-          <FilterDropdown
-            id="thc"
-            label="THC"
-            options={filterOptions.thc}
-            selected={thcFilter}
-            open={openFilter === "thc"}
-            onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
-            onSelect={(id, value) => {
-              setThcFilter(value);
-              setOpenFilter(null);
-            }}
-            placeholder="THC"
-          />
-          <FilterDropdown
-            id="yield"
-            label="Yield"
-            options={filterOptions.yield}
-            selected={yieldFilter}
-            open={openFilter === "yield"}
-            onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
-            onSelect={(id, value) => {
-              setYieldFilter(value);
-              setOpenFilter(null);
-            }}
-            placeholder="Yield"
-          />
+          {!categoryParam ? (
+            <span className="flex items-center text-xs text-pr_w/60">
+              Select a category to see more filters
+            </span>
+          ) : filtersLoading ? (
+            <span className="flex items-center text-xs text-pr_w/60">
+              Loading filters...
+            </span>
+          ) : categoryFilters.length === 0 ? (
+            <span className="flex items-center text-xs text-pr_w/60">
+              {filtersError || "No filters for this category."}
+            </span>
+          ) : null}
+          {categoryFilters.map((filter) => (
+            (() => {
+              const selectorOptions = selectorOptionsBySlug[filter.slug];
+              const derivedOptions = filterOptionsBySlug[filter.slug] ?? [];
+
+              const apiOptions =
+                filter.options?.map((option) => option.value) ?? [];
+
+              if (filter.type === "multi") {
+                const options =
+                  apiOptions.length > 0
+                    ? apiOptions
+                    : derivedOptions.length > 0
+                      ? derivedOptions
+                      : selectorOptions?.map((option) => option.label) ?? [];
+                return (
+                  <FilterDropdown
+                    key={filter.slug}
+                    id={filter.slug}
+                    label={filter.name}
+                    options={options.map((option) => ({
+                      label: option,
+                      value: option,
+                    }))}
+                    selected=""
+                    selectedValues={multiSelections[filter.slug] ?? []}
+                    open={openFilter === filter.slug}
+                    onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
+                    onSelect={() => null}
+                    onToggleValue={(id, value) => {
+                      setMultiSelections((prev) => {
+                        const current = prev[filter.slug] ?? [];
+                        const exists = current.includes(value);
+                        const next = exists
+                          ? current.filter((entry) => entry !== value)
+                          : [...current, value];
+                        return { ...prev, [filter.slug]: next };
+                      });
+                      setOpenFilter(null);
+                    }}
+                    placeholder={filter.name}
+                    multi
+                  />
+                );
+              }
+
+              if (filter.type === "boolean") {
+                const options =
+                  apiOptions.length > 0
+                    ? apiOptions
+                    : derivedOptions.length > 0
+                      ? derivedOptions
+                      : ["Yes", "No"];
+                return (
+                  <FilterDropdown
+                    key={filter.slug}
+                    id={filter.slug}
+                    label={filter.name}
+                    options={options.map((option) => ({
+                      label: option,
+                      value: option,
+                    }))}
+                    selected={filterSelections[filter.slug] ?? ""}
+                    open={openFilter === filter.slug}
+                    onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
+                    onSelect={(id, value) => {
+                      setFilterSelections((prev) => ({ ...prev, [filter.slug]: value }));
+                      setOpenFilter(null);
+                    }}
+                    placeholder={filter.name}
+                  />
+                );
+              }
+
+              if (filter.type === "select") {
+                const options =
+                  apiOptions.length > 0
+                    ? apiOptions
+                    : derivedOptions.length > 0
+                      ? derivedOptions
+                      : selectorOptions?.map((option) => option.label) ?? [];
+                return (
+                  <FilterDropdown
+                    key={filter.slug}
+                    id={filter.slug}
+                    label={filter.name}
+                    options={options.map((option) => ({
+                      label: option,
+                      value: option,
+                    }))}
+                    selected={filterSelections[filter.slug] ?? ""}
+                    open={openFilter === filter.slug}
+                    onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
+                    onSelect={(id, value) => {
+                      setFilterSelections((prev) => ({
+                        ...prev,
+                        [filter.slug]: value,
+                      }));
+                      setOpenFilter(null);
+                    }}
+                    placeholder={filter.name}
+                  />
+                );
+              }
+
+              if (filter.type === "number") {
+                return (
+                  <FilterDropdown
+                    key={filter.slug}
+                    id={filter.slug}
+                    label={filter.name}
+                    options={[]}
+                    selected=""
+                    open={openFilter === filter.slug}
+                    onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
+                    onSelect={() => null}
+                    placeholder={filter.name}
+                    variant="number"
+                    minPrice={filterValues[filter.slug]?.min ?? ""}
+                    onMinPriceChange={(value) =>
+                      setFilterValues((prev) => ({
+                        ...prev,
+                        [filter.slug]: {
+                          ...prev[filter.slug],
+                          min: value,
+                        },
+                      }))
+                    }
+                    inputSuffix={filter.name.includes("%") ? "%" : ""}
+                  />
+                );
+              }
+
+              if (selectorOptions && selectorOptions.length > 0) {
+                return (
+                  <FilterDropdown
+                    key={filter.slug}
+                    id={filter.slug}
+                    label={filter.name}
+                    options={selectorOptions.map((option) => ({
+                      label: option.label,
+                      value: option.label,
+                    }))}
+                    selected={filterSelections[filter.slug] ?? ""}
+                    open={openFilter === filter.slug}
+                    onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
+                    onSelect={(id, value) => {
+                      setFilterSelections((prev) => ({
+                        ...prev,
+                        [filter.slug]: value,
+                      }));
+                      if (!value) {
+                        setFilterValues((prev) => ({
+                          ...prev,
+                          [filter.slug]: {},
+                        }));
+                        setOpenFilter(null);
+                        return;
+                      }
+                      const match = selectorOptions.find(
+                        (option) => option.label === value,
+                      );
+                      setFilterValues((prev) => ({
+                        ...prev,
+                        [filter.slug]: {
+                          min: match?.min?.toString(),
+                          max: match?.max?.toString(),
+                        },
+                      }));
+                      setOpenFilter(null);
+                    }}
+                    placeholder={filter.name}
+                  />
+                );
+              }
+
+              return (
+                <FilterDropdown
+                  key={filter.slug}
+                  id={filter.slug}
+                  label={filter.name}
+                  options={[]}
+                  selected=""
+                  open={openFilter === filter.slug}
+                  onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
+                  onSelect={() => null}
+                  placeholder={filter.name}
+                  variant="range"
+                  minPrice={filterValues[filter.slug]?.min ?? ""}
+                  maxPrice={filterValues[filter.slug]?.max ?? ""}
+                  onMinPriceChange={(value) =>
+                    setFilterValues((prev) => ({
+                      ...prev,
+                      [filter.slug]: {
+                        ...prev[filter.slug],
+                        min: value,
+                      },
+                    }))
+                  }
+                  onMaxPriceChange={(value) =>
+                    setFilterValues((prev) => ({
+                      ...prev,
+                      [filter.slug]: {
+                        ...prev[filter.slug],
+                        max: value,
+                      },
+                    }))
+                  }
+                  inputSuffix={filter.name.includes("%") ? "%" : ""}
+                />
+              );
+            })()
+          ))}
+          <div className="relative flex min-w-[180px] flex-1 items-center rounded-full bg-pr_w px-4 py-2 text-xs text-pr_dg sm:min-w-[220px] sm:max-w-[260px]">
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search products"
+              className="w-full bg-transparent text-xs font-semibold text-pr_dg outline-none placeholder:text-pr_dg/50"
+            />
+          </div>
         </div>
 
         {error ? (
@@ -435,64 +777,73 @@ export default function SeedsPage() {
         ) : null}
 
         <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {filteredItems.map((seed) => (
-            <ProductCard
-              key={seed.productId ?? seed.title}
-              title={seed.title}
-              description={seed.description}
-              price={seed.price}
-              isNew={false}
-              href={seed.productId ? `/seeds/${seed.productId}` : undefined}
-              productId={seed.productId}
-              imageUrl={seed.imageUrl}
-            />
-          ))}
+          {showSkeletons
+            ? Array.from({ length: 8 }).map((_, index) => (
+                <div
+                  key={`product-skeleton-${index}`}
+                  className="h-[520px] rounded-2xl bg-white/5"
+                />
+              ))
+            : orderedItems.map((seed) => (
+                <ProductCard
+                  key={seed.slug ?? seed.productId ?? seed.title}
+                  title={seed.title}
+                  description={seed.description}
+                  price={seed.price}
+                  isNew={false}
+                  productId={seed.productId}
+                  href={seed.slug ? `/products/${seed.slug}` : undefined}
+                  imageUrl={seed.imageUrl}
+                />
+              ))}
         </div>
 
-        {!loading && filteredItems.length === 0 ? (
+        {!loading && orderedItems.length === 0 ? (
           <p className="mt-6 text-sm text-pr_w/70">No products found.</p>
         ) : null}
 
-        <div className="mt-12 flex items-center justify-center gap-4">
-          <button
-            type="button"
-            onClick={() =>
-              setCurrentPage((prev) => Math.max(1, prev - 1))
-            }
-            disabled={currentPage === 1 || totalPages === 1}
-            className="flex h-12 w-20 items-center justify-center rounded-full bg-pr_w text-pr_dg transition disabled:opacity-50"
-          >
-            ←
-          </button>
-          <div className="flex items-center rounded-full bg-pr_w px-3 py-2 text-sm text-pr_dg">
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-              (page) => (
-                <button
-                  key={page}
-                  type="button"
-                  onClick={() => setCurrentPage(page)}
-                  className={`mx-1 flex h-10 w-16 items-center justify-center rounded-full transition ${
-                    page === currentPage
-                      ? "bg-pr_dg text-pr_w"
-                      : "text-pr_dg/70 hover:text-pr_dg"
-                  }`}
-                >
-                  {page}
-                </button>
-              ),
-            )}
+        {totalPages > 1 ? (
+          <div className="mt-12 flex items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentPage((prev) => Math.max(1, prev - 1))
+              }
+              disabled={currentPage === 1 || totalPages === 1}
+              className="flex h-12 w-20 items-center justify-center rounded-full bg-pr_w text-pr_dg transition disabled:opacity-50"
+            >
+              ←
+            </button>
+            <div className="flex items-center rounded-full bg-pr_w px-3 py-2 text-sm text-pr_dg">
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`mx-1 flex h-10 w-16 items-center justify-center rounded-full transition ${
+                      page === currentPage
+                        ? "bg-pr_dg text-pr_w"
+                        : "text-pr_dg/70 hover:text-pr_dg"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ),
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+              }
+              disabled={currentPage === totalPages || totalPages === 1}
+              className="flex h-12 w-20 items-center justify-center rounded-full bg-pr_w text-pr_dg transition disabled:opacity-50"
+            >
+              →
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-            }
-            disabled={currentPage === totalPages || totalPages === 1}
-            className="flex h-12 w-20 items-center justify-center rounded-full bg-pr_w text-pr_dg transition disabled:opacity-50"
-          >
-            →
-          </button>
-        </div>
+        ) : null}
       </section>
     </div>
   );

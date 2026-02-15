@@ -7,34 +7,35 @@ import { Menu, X, ShoppingCart, User } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { seedItems } from "@/lib/seeds";
 
-const BUSINESS_URL = "https://evervale.com";
+const BUSINESS_URL = "https://everlave-b2b.netlify.app/";
 
 const seedDropdownItems = seedItems.slice(0, 5).map((seed) => ({
   label: seed.title,
-  href: `/seeds/${seed.productId ?? seed.slug}`,
 }));
 
 const tabs: SectionTab[] = [
   { id: "home", label: "Home", href: "/" },
   { id: "seeds", label: "Seeds", dropdownItems: seedDropdownItems },
-  { id: "products", label: "Cannabinoid products", href: "/seeds?tab=products" },
+  {
+    id: "products",
+    label: "Cannabinoid products",
+    href: "/products?category=cannabis-seeds",
+  },
   {
     id: "business",
     label: "For Business",
     href: BUSINESS_URL,
     external: true,
   },
-  { id: "blog", label: "Blog", href: "/blog" },
 ];
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuMounted, setMobileMenuMounted] = useState(false);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -44,12 +45,10 @@ const Header = () => {
 
   const activeId = useMemo(() => {
     if (pathname === "/") return "home";
-    if (pathname.startsWith("/seeds")) {
-      return searchParams?.get("tab") === "products" ? "products" : "seeds";
-    }
-    if (pathname.startsWith("/blog")) return "blog";
+    if (pathname.startsWith("/products")) return "products";
+    if (pathname.startsWith("/seeds")) return "seeds";
     return "home";
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   const { cartHref, profileHref } = useMemo(() => {
     if (isAuthenticated) {
@@ -76,17 +75,17 @@ const Header = () => {
             <div className="flex items-center gap-3">
               <Link
                 href={cartHref}
-                className="flex h-12 w-20 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
+                className="flex h-10 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
                 aria-label="Open cart"
               >
-                <ShoppingCart className="h-5 w-5" />
+                <ShoppingCart className="h-4 w-4" />
               </Link>
               <Link
                 href={profileHref}
-                className="flex h-12 w-20 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
+                className="flex h-10 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
                 aria-label="Open account"
               >
-                <User className="h-5 w-5" />
+                <User className="h-4 w-4" />
               </Link>
             </div>
           </div>
@@ -139,28 +138,30 @@ const Header = () => {
         >
           <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6">
             <div className="py-4 border-b border-white/10">
-              <SectionSlider
-                tabs={tabs}
-                activeId={activeId}
-                onNavigate={() => setMobileMenuOpen(false)}
-              />
+              <div className="flex justify-center">
+                <SectionSlider
+                  tabs={tabs}
+                  activeId={activeId}
+                  onNavigate={() => setMobileMenuOpen(false)}
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-3 py-4">
+            <div className="flex items-center justify-center gap-3 py-4">
               <Link
                 href={cartHref}
-                className="flex h-12 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
+                className="flex h-10 w-14 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
                 aria-label="Open cart"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <ShoppingCart className="h-5 w-5" />
+                <ShoppingCart className="h-4 w-4" />
               </Link>
               <Link
                 href={profileHref}
-                className="flex h-12 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
+                className="flex h-10 w-14 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
                 aria-label="Open account"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <User className="h-5 w-5" />
+                <User className="h-4 w-4" />
               </Link>
             </div>
           </div>

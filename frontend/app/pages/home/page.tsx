@@ -15,7 +15,7 @@ export default function HomePage() {
       <PopularProducts />
       <WhyChooseUs />
       <ProofScale />
-      <Blog />
+      {/* <Blog /> */}
     </div>
   );
 }

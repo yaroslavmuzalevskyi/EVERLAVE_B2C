@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Logo from "@/components/ui/LogoDark";
 import TextInput from "@/components/auth/TextInput";
 import PrimaryButton from "@/components/auth/PrimaryButton";
@@ -10,7 +10,6 @@ import { useAuth } from "@/components/auth/AuthProvider";
 
 export default function SignInPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +38,7 @@ export default function SignInPage() {
     setIsSubmitting(true);
     try {
       await login(email.trim().toLowerCase(), password);
-      const next = searchParams?.get("next") || "/";
+      const next = new URLSearchParams(window.location.search).get("next") || "/";
       router.push(next);
     } catch (error) {
       setFormError(

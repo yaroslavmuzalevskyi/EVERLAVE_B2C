@@ -27,10 +27,10 @@ export default function ProductCard({
   imageUrl,
   productId,
 }: NewProductCardProps) {
-  const resolvedHref = href ?? (productId ? `/seeds/${productId}` : undefined);
+  const resolvedHref = href ?? (productId ? `/products/${productId}` : undefined);
   const content = (
     <>
-      <div className="relative rounded-2xl bg-sr_w p-4">
+      <div className="relative">
         {isNew && (
           <span
             className={cn(
@@ -45,10 +45,10 @@ export default function ProductCard({
           <img
             src={imageUrl}
             alt={title}
-            className="h-[400px] w-full rounded-xl object-cover"
+            className="h-[400px] w-full rounded-2xl object-cover"
           />
         ) : (
-          <div className="h-[400px] rounded-xl bg-pr_w/60" />
+          <div className="h-[400px] rounded-2xl bg-pr_w/60" />
         )}
       </div>
 

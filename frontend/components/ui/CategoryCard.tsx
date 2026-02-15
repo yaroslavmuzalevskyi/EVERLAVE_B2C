@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 type CategoryCardProps = {
@@ -5,6 +6,7 @@ type CategoryCardProps = {
   description: string;
   active?: boolean;
   index?: number;
+  href?: string;
 };
 
 export default function CategoryCard({
@@ -12,11 +14,12 @@ export default function CategoryCard({
   description,
   active = false,
   index = 0,
+  href,
 }: CategoryCardProps) {
   const cornerClass =
     index % 2 === 0 ? "rounded-tr-2xl rounded-bl-2xl" : "rounded-tl-2xl rounded-br-2xl";
 
-  return (
+  const card = (
     <div
       className={cn(
         "flex min-h-[180px] h-full flex-col justify-end border border-white/10 px-6 pb-5 pt-4 transition",
@@ -30,4 +33,14 @@ export default function CategoryCard({
       </p>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block h-full">
+        {card}
+      </Link>
+    );
+  }
+
+  return card;
 }

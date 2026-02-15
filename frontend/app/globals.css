@@ -209,6 +209,21 @@ a {
   animation: mobileMenuExit 180ms ease-in forwards;
 }
 
+.scroll-reveal-hidden {
+  opacity: 0;
+  transform: translate3d(0, 26px, 0);
+  transition:
+    opacity 560ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--scroll-reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.scroll-reveal-hidden.scroll-reveal-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
 .app-shell {
   width: 100%;
   max-width: 1440px;
@@ -230,5 +245,13 @@ a {
 @media (max-width: 390px) {
   .app-shell {
     max-width: 390px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal-hidden {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }

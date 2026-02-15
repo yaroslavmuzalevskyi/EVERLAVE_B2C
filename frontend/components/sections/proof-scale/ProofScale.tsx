@@ -22,7 +22,7 @@ const cards: ProofCard[] = [
     icon: <ShoppingCart className="h-8 w-8 text-sr_dg" />,
   },
   {
-    title: "202X",
+    title: "2026",
     description: "Founded This Year",
     icon: <Lightbulb className="h-8 w-8 text-sr_dg" />,
   },

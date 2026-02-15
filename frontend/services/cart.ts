@@ -1,12 +1,12 @@
 import { apiFetch } from "@/lib/apiClient";
 
 export type CartProduct = {
-  id: string;
+  slug: string;
   name: string;
   priceCents: number;
   currency: string;
   stockQty: number;
-  images?: Array<{ id: string; url: string }>;
+  images?: Array<{ id?: string; url: string }>;
 };
 
 export type CartItem = {
@@ -21,47 +21,93 @@ export type CartResponse = {
   subtotalCents: number;
 };
 
+type ApiError = Error & { status?: number };
+
+function buildApiError(
+  fallbackMessage: string,
+  status: number,
+  payload?: { message?: string; error?: string },
+) {
+  const error = new Error(
+    payload?.message || payload?.error || fallbackMessage,
+  ) as ApiError;
+  error.status = status;
+  return error;
+}
+
+function ensureProductSlug(productSlug: string) {
+  return productSlug.trim();
+}
+
 export async function fetchCart() {
   const response = await apiFetch("/cart");
   if (!response.ok) {
-    throw new Error("Failed to load cart");
+    const error = await response.json().catch(() => ({}));
+    throw buildApiError("Failed to load cart", response.status, error);
   }
   return (await response.json()) as CartResponse;
 }
 
-export async function addCartItem(productId: string, qty = 1) {
+export async function addCartItem(productSlug: string, qty = 1) {
+  const normalizedProductSlug = ensureProductSlug(productSlug);
+  if (!normalizedProductSlug) {
+    throw buildApiError("Product is unavailable", 400);
+  }
+
+  const normalizedQty = Math.max(1, Math.trunc(qty || 1));
   const response = await apiFetch("/cart/items", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ productId, qty }),
+    body: JSON.stringify({
+      productSlug: normalizedProductSlug,
+      qty: normalizedQty,
+    }),
   });
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error?.message || "Failed to add item");
+    throw buildApiError("Failed to add item", response.status, error);
+  }
+
+  return response.json() as Promise<{ success: boolean }>;
+}
+
+export async function updateCartItem(productSlug: string, qty: number) {
+  const normalizedProductSlug = ensureProductSlug(productSlug);
+  if (!normalizedProductSlug) {
+    throw buildApiError("Product slug is required", 400);
+  }
+  const response = await apiFetch(
+    `/cart/items/${encodeURIComponent(normalizedProductSlug)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ qty }),
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw buildApiError("Failed to update item", response.status, error);
   }
   return response.json() as Promise<{ success: boolean }>;
 }
 
-export async function updateCartItem(productId: string, qty: number) {
-  const response = await apiFetch(`/cart/items/${productId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ qty }),
-  });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error?.message || "Failed to update item");
+export async function removeCartItem(productSlug: string) {
+  const normalizedProductSlug = ensureProductSlug(productSlug);
+  if (!normalizedProductSlug) {
+    throw buildApiError("Product slug is required", 400);
   }
-  return response.json() as Promise<{ success: boolean }>;
-}
+  const response = await apiFetch(
+    `/cart/items/${encodeURIComponent(normalizedProductSlug)}`,
+    {
+      method: "DELETE",
+    },
+  );
 
-export async function removeCartItem(productId: string) {
-  const response = await apiFetch(`/cart/items/${productId}`, {
-    method: "DELETE",
-  });
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error?.message || "Failed to remove item");
+    throw buildApiError("Failed to remove item", response.status, error);
   }
   return response.json() as Promise<{ success: boolean }>;
 }
@@ -72,7 +118,7 @@ export async function clearCart() {
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error?.message || "Failed to clear cart");
+    throw buildApiError("Failed to clear cart", response.status, error);
   }
   return response.json() as Promise<{ success: boolean }>;
 }

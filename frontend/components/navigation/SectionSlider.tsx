@@ -25,7 +25,7 @@ export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
   }, []);
 
   return (
-    <nav className="flex flex-wrap items-center gap-2 rounded-full bg-pr_w/95 p-1">
+    <nav className="flex w-full flex-wrap items-center justify-center gap-2 rounded-full bg-pr_w/95 p-2 lg:w-auto lg:justify-center lg:p-1">
       {tabs.map((tab) => {
         const isActive = tab.id === activeId;
         const hasDropdown = Boolean(tab.dropdownItems?.length);
@@ -64,9 +64,9 @@ export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
                 )}
               >
                 {tab.dropdownItems?.map((item) =>
-                  item.external ? (
+                  item.external && item.href ? (
                     <a
-                      key={item.href}
+                      key={item.href ?? item.label}
                       href={item.href}
                       target="_blank"
                       rel="noreferrer"
@@ -78,7 +78,7 @@ export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
                     >
                       {item.label}
                     </a>
-                  ) : (
+                  ) : item.href ? (
                     <Link
                       key={item.href}
                       href={item.href}
@@ -90,6 +90,13 @@ export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
                     >
                       {item.label}
                     </Link>
+                  ) : (
+                    <span
+                      key={item.label}
+                      className="block rounded-lg px-3 py-2 text-left text-pr_dg/60"
+                    >
+                      {item.label}
+                    </span>
                   ),
                 )}
               </div>
