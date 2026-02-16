@@ -101,7 +101,12 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
     : formatPrice(0, currency);
 
   const variants =
-    product.content?.variants?.filter((variant) => variant.label) ?? [];
+    product.content?.variants?.filter(
+      (
+        variant,
+      ): variant is { label: string; priceCents?: number } =>
+        typeof variant.label === "string" && variant.label.trim().length > 0,
+    ) ?? [];
   const variantPrices =
     variants.length > 0
       ? variants.map((variant) => ({
