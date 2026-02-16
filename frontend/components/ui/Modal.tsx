@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 type ModalProps = {
@@ -11,24 +11,37 @@ type ModalProps = {
 };
 
 export default function Modal({ isOpen, onClose, children, className }: ModalProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
+    <div className="fixed inset-0 z-[120] overflow-y-auto">
       <button
         type="button"
         aria-label="Close modal"
         onClick={onClose}
         className="absolute inset-0 bg-black/60"
       />
-      <div
-        className={cn(
-          "relative w-full max-w-5xl rounded-[32px] bg-pr_w p-6 text-pr_dg shadow-2xl",
-          className,
-        )}
-        onClick={(event) => event.stopPropagation()}
-      >
-        {children}
+      <div className="relative flex min-h-full items-start justify-center p-4 sm:items-center">
+        <div
+          className={cn(
+            "relative w-full max-w-5xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[32px] bg-pr_w p-6 text-pr_dg shadow-2xl",
+            className,
+          )}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
