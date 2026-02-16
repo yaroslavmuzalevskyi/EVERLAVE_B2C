@@ -42,13 +42,13 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
 
   let product: ProductDetails | null = null;
   try {
-    product = await fetchProductById(slug, { cache: "no-store" });
+    product = await fetchProductById(slug, { cache: "force-cache" });
   } catch {}
 
   // Fallback to product list lookup when detail endpoint is flaky/unavailable.
   if (!product) {
     try {
-      const items = await fetchAllProducts(undefined, { cache: "no-store" });
+      const items = await fetchAllProducts(undefined, { cache: "force-cache" });
       const fallback = items.find((item) => item.slug === slug);
       if (fallback) {
         product = {

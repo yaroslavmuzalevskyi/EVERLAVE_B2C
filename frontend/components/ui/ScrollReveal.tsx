@@ -7,7 +7,6 @@ const TARGET_SELECTOR = [
   "main section",
   "main article",
   "main aside",
-  "main div",
   "main h1",
   "main h2",
   "main h3",
@@ -15,14 +14,12 @@ const TARGET_SELECTOR = [
   "main h5",
   "main h6",
   "main p",
-  "main span",
   "main li",
-  "main a",
   "main button",
   "main img",
-  "main input",
-  "main textarea",
-  "main label",
+  "main form",
+  "main ul",
+  "main ol",
   "main blockquote",
 ].join(", ");
 
@@ -58,6 +55,9 @@ export default function ScrollReveal() {
     const reducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    if (reducedMotion || isMobile) return;
+
     let sequence = 0;
     const processed = new WeakSet<HTMLElement>();
     const revealObserver =
@@ -113,6 +113,14 @@ export default function ScrollReveal() {
       scan(main);
     });
 
+    const failSafeTimer = window.setTimeout(() => {
+      main
+        .querySelectorAll<HTMLElement>(".scroll-reveal-hidden")
+        .forEach((element) => {
+          element.classList.add("scroll-reveal-visible");
+        });
+    }, 1800);
+
     const mutationObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const addedNode of mutation.addedNodes) {
@@ -125,6 +133,7 @@ export default function ScrollReveal() {
 
     return () => {
       window.cancelAnimationFrame(frame);
+      window.clearTimeout(failSafeTimer);
       mutationObserver.disconnect();
       revealObserver?.disconnect();
     };
