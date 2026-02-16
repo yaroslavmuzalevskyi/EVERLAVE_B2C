@@ -480,7 +480,7 @@ export default function SeedsPage() {
         <h1 className="mt-2 text-3xl font-semibold">{pageTitle}</h1>
 
         <div
-          className="relative z-[120] mt-4 flex flex-wrap gap-2"
+          className="relative z-[120] mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap"
           data-filter-root
           data-no-reveal="true"
         >
@@ -544,15 +544,15 @@ export default function SeedsPage() {
             }}
           />
           {!categoryParam ? (
-            <span className="flex items-center text-xs text-pr_w/60">
+            <span className="flex items-center text-xs text-pr_w/60 sm:px-1">
               Select a category to see more filters
             </span>
           ) : filtersLoading ? (
-            <span className="flex items-center text-xs text-pr_w/60">
+            <span className="flex items-center text-xs text-pr_w/60 sm:px-1">
               Loading filters...
             </span>
           ) : categoryFilters.length === 0 ? (
-            <span className="flex items-center text-xs text-pr_w/60">
+            <span className="flex items-center text-xs text-pr_w/60 sm:px-1">
               {filtersError || "No filters for this category."}
             </span>
           ) : null}
@@ -769,7 +769,7 @@ export default function SeedsPage() {
               );
             })()
           ))}
-          <div className="relative flex min-w-[180px] flex-1 items-center rounded-full bg-pr_w px-4 py-2 text-xs text-pr_dg sm:min-w-[220px] sm:max-w-[260px]">
+          <div className="relative flex w-full min-w-0 flex-1 items-center rounded-full bg-pr_w px-4 py-2 text-xs text-pr_dg sm:min-w-[220px] sm:max-w-[260px]">
             <input
               type="text"
               value={search}

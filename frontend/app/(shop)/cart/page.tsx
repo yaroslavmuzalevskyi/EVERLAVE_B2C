@@ -41,10 +41,16 @@ export default function CartPage() {
   const [error, setError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
+  const [updatingProductSlug, setUpdatingProductSlug] = useState<string | null>(
+    null,
+  );
   const [address, setAddress] = useState<AddressState>(initialAddress);
 
-  const loadCart = async () => {
-    setLoading(true);
+  const loadCart = async (options?: { showSpinner?: boolean }) => {
+    const showSpinner = options?.showSpinner ?? true;
+    if (showSpinner) {
+      setLoading(true);
+    }
     setError("");
     try {
       const data = await fetchCart();
@@ -52,7 +58,9 @@ export default function CartPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load cart");
     } finally {
-      setLoading(false);
+      if (showSpinner) {
+        setLoading(false);
+      }
     }
   };
 
@@ -62,18 +70,33 @@ export default function CartPage() {
 
   const handleQtyChange = async (productId: string, qty: number) => {
     if (qty < 1) return;
-    await updateCartItem(productId, qty);
-    await loadCart();
+    try {
+      setUpdatingProductSlug(productId);
+      await updateCartItem(productId, qty);
+      await loadCart({ showSpinner: false });
+    } finally {
+      setUpdatingProductSlug(null);
+    }
   };
 
   const handleRemove = async (productId: string) => {
-    await removeCartItem(productId);
-    await loadCart();
+    try {
+      setUpdatingProductSlug(productId);
+      await removeCartItem(productId);
+      await loadCart({ showSpinner: false });
+    } finally {
+      setUpdatingProductSlug(null);
+    }
   };
 
   const handleClear = async () => {
-    await clearCart();
-    await loadCart();
+    try {
+      setUpdatingProductSlug("__clear__");
+      await clearCart();
+      await loadCart({ showSpinner: false });
+    } finally {
+      setUpdatingProductSlug(null);
+    }
   };
 
   const handleAddressChange = (field: keyof AddressState, value: string) => {
@@ -136,14 +159,15 @@ export default function CartPage() {
               <button
                 type="button"
                 onClick={handleClear}
-                className="self-start rounded-full border border-pr_w/30 px-4 py-2 text-xs text-pr_w/80"
+                disabled={updatingProductSlug !== null}
+                className="self-start rounded-full border border-pr_w/30 px-4 py-2 text-xs text-pr_w/80 disabled:opacity-60"
               >
                 Clear cart
               </button>
             ) : null}
           </div>
 
-          {loading ? (
+          {loading && !cart ? (
             <p className="mt-6 text-sm text-pr_w/70">Loading cart...</p>
           ) : error ? (
             <p className="mt-6 text-sm text-pr_dr">{error}</p>
@@ -194,6 +218,7 @@ export default function CartPage() {
                               onClick={() =>
                                 handleQtyChange(productSlug, item.qty - 1)
                               }
+                              disabled={updatingProductSlug === productSlug}
                               className="h-8 w-8 rounded-full text-sm"
                             >
                               -
@@ -204,6 +229,7 @@ export default function CartPage() {
                               onClick={() =>
                                 handleQtyChange(productSlug, item.qty + 1)
                               }
+                              disabled={updatingProductSlug === productSlug}
                               className="h-8 w-8 rounded-full text-sm"
                             >
                               +
@@ -215,6 +241,7 @@ export default function CartPage() {
                           <button
                             type="button"
                             onClick={() => handleRemove(productSlug)}
+                            disabled={updatingProductSlug === productSlug}
                             className="text-xs text-pr_dr"
                           >
                             Remove

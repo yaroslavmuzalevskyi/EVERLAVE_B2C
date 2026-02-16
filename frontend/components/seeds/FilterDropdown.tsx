@@ -79,11 +79,11 @@ export default function FilterDropdown({
   const maxTitle = maxLabel ?? "Maximum";
 
   return (
-    <div className="relative z-[120]" data-no-reveal="true">
+    <div className="relative z-[120] w-full sm:w-auto" data-no-reveal="true">
       <button
         type="button"
         onClick={() => onToggle(id)}
-        className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs transition ${
+        className={`inline-flex w-full items-center justify-between gap-2 rounded-full px-4 py-2 text-xs transition sm:w-auto sm:justify-start ${
           isActive ? "bg-pr_w text-pr_dg" : "bg-sr_dg text-pr_w"
         }`}
       >
@@ -94,10 +94,12 @@ export default function FilterDropdown({
       </button>
 
       <div
-        className={`absolute left-0 z-[130] mt-2 origin-top-left rounded-2xl bg-sr_dg p-3 text-xs text-pr_w shadow-lg transition ${
-          isInput ? "w-64" : "w-44"
+        className={`z-[130] mt-2 w-full rounded-2xl bg-sr_dg p-3 text-xs text-pr_w shadow-lg sm:absolute sm:left-0 sm:origin-top-left sm:transition ${
+          isInput ? "sm:w-64" : "sm:w-44"
         } ${
-          open ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
+          open
+            ? "block scale-100 opacity-100"
+            : "hidden sm:block sm:pointer-events-none sm:scale-95 sm:opacity-0"
         }`}
       >
         {isInput ? (
