@@ -1,8 +1,8 @@
 import Link from "next/link";
 import EffectPill from "@/components/seeds/EffectPill";
-import AddToCartButton from "@/components/cart/AddToCartButton";
 import ReviewsSection from "@/components/seeds/ReviewsSection";
 import ReviewSummaryInline from "@/components/seeds/ReviewSummaryInline";
+import SeedVariantPurchase from "@/components/seeds/SeedVariantPurchase";
 import {
   fetchAllProducts,
   fetchProductById,
@@ -204,16 +204,10 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
 
             <div className="mt-4">
               <p className="text-xs font-semibold">Number of seeds:</p>
-              <div className="mt-2 flex gap-2">
-                {variantPrices.map((variant) => (
-                  <button
-                    key={variant.label}
-                    className="rounded-full border border-pr_dg/30 px-4 py-2 text-xs"
-                  >
-                    {variant.label} {variant.price}
-                  </button>
-                ))}
-              </div>
+              <SeedVariantPurchase
+                productSlug={productSlug}
+                variants={variantPrices}
+              />
             </div>
 
             <div className="mt-5 grid gap-2 text-xs">
@@ -231,11 +225,6 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
               ))}
             </div>
 
-            <AddToCartButton
-              productId={productSlug}
-              variant="primary"
-              className="mt-5 w-full"
-            />
           </div>
         </div>
 

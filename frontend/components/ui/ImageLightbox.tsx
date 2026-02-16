@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Modal from "@/components/ui/Modal";
-import { cn } from "@/lib/utils";
+import { createPortal } from "react-dom";
 
 type ImageLightboxProps = {
   images: string[];
@@ -20,65 +19,133 @@ export default function ImageLightbox({
   title,
 }: ImageLightboxProps) {
   const [index, setIndex] = useState(initialIndex);
+  const [mounted, setMounted] = useState(false);
+  const hasMultiple = images.length > 1;
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   useEffect(() => {
     if (isOpen) setIndex(initialIndex);
   }, [isOpen, initialIndex]);
 
-  if (!isOpen || images.length === 0) return null;
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+
+      if (!hasMultiple) return;
+
+      if (event.key === "ArrowLeft") {
+        setIndex((prev) => (prev - 1 + images.length) % images.length);
+      }
+
+      if (event.key === "ArrowRight") {
+        setIndex((prev) => (prev + 1) % images.length);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [hasMultiple, images.length, isOpen, onClose]);
+
+  if (!mounted || !isOpen || images.length === 0) return null;
 
   const current = images[index] ?? images[0];
+  const goPrev = () => {
+    if (!hasMultiple) return;
+    setIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+  const goNext = () => {
+    if (!hasMultiple) return;
+    setIndex((prev) => (prev + 1) % images.length);
+  };
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-[min(1400px,96vw)]">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{title ?? "Photos"}</h3>
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[999] bg-black/90"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title ?? "Image viewer"}
+    >
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onClose();
+        }}
+        className="absolute right-4 top-4 z-20 rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/25"
+      >
+        Close
+      </button>
+
+      {hasMultiple ? (
         <button
           type="button"
-          onClick={onClose}
-          className="rounded-full bg-pr_dg px-4 py-2 text-xs font-semibold text-pr_w"
+          onClick={(event) => {
+            event.stopPropagation();
+            goPrev();
+          }}
+          className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/15 px-3 py-2 text-2xl leading-none text-white backdrop-blur transition hover:bg-white/25 sm:left-6"
+          aria-label="Previous image"
         >
-          Close
+          ‹
         </button>
-      </div>
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
-        <div className="rounded-2xl bg-sr_dg/90 p-4">
-          <a
-            href={current}
-            target="_blank"
-            rel="noreferrer"
-            className="block rounded-2xl"
-          >
-            <img
-              src={current}
-              alt=""
-              className="max-h-[72vh] w-full rounded-2xl object-contain"
-            />
-          </a>
-          <p className="mt-2 text-xs text-pr_dg/60">Click image to open original size</p>
-        </div>
-        <div className="grid grid-cols-2 gap-3 content-start">
-          {images.map((img, idx) => (
-            <button
-              key={`${img}-${idx}`}
-              type="button"
-              onClick={() => setIndex(idx)}
-              className={cn(
-                "rounded-xl border p-1 transition",
-                idx === index
-                  ? "border-pr_dg"
-                  : "border-transparent hover:border-pr_dg/40",
-              )}
-            >
-              <img
-                src={img}
-                alt=""
-                className="h-28 w-full rounded-lg object-cover"
-              />
-            </button>
-          ))}
+      ) : null}
+
+      {hasMultiple ? (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            goNext();
+          }}
+          className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/15 px-3 py-2 text-2xl leading-none text-white backdrop-blur transition hover:bg-white/25 sm:right-6"
+          aria-label="Next image"
+        >
+          ›
+        </button>
+      ) : null}
+
+      <div className="flex h-full w-full items-center justify-center p-4 sm:p-8">
+        <div
+          className="flex max-h-full max-w-full items-center justify-center"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <img
+            src={current}
+            alt={title ?? "Product image"}
+            className="h-auto w-auto max-h-[90vh] max-w-[94vw] object-contain"
+          />
         </div>
       </div>
-    </Modal>
+
+      {hasMultiple ? (
+        <div
+          className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full bg-white/15 px-3 py-1 text-xs text-white backdrop-blur"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {index + 1} / {images.length}
+        </div>
+      ) : null}
+    </div>,
+    document.body,
   );
 }

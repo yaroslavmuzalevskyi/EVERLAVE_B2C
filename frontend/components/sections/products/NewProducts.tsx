@@ -76,7 +76,7 @@ export default async function NewProducts() {
               productId={product.productId}
               href={product.slug ? `/products/${product.slug}` : undefined}
               badgeLabel="New"
-              badgeClassName="bg-pr_y text-pr_dg"
+              badgeClassName="bg-pr_dg text-pr_w"
             />
           ))
         )}

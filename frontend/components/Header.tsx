@@ -8,22 +8,12 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { usePathname } from "next/navigation";
-import { seedItems } from "@/lib/seeds";
 
 const BUSINESS_URL = "https://everlave-b2b.netlify.app/";
 
-const seedDropdownItems = seedItems.slice(0, 5).map((seed) => ({
-  label: seed.title,
-}));
-
 const tabs: SectionTab[] = [
   { id: "home", label: "Home", href: "/" },
-  { id: "seeds", label: "Seeds", dropdownItems: seedDropdownItems },
-  {
-    id: "products",
-    label: "Cannabinoid products",
-    href: "/products?category=cannabis-seeds",
-  },
+  { id: "seeds", label: "Seeds", href: "/products" },
   {
     id: "business",
     label: "For Business",
@@ -45,7 +35,7 @@ const Header = () => {
 
   const activeId = useMemo(() => {
     if (pathname === "/") return "home";
-    if (pathname.startsWith("/products")) return "products";
+    if (pathname.startsWith("/products")) return "seeds";
     if (pathname.startsWith("/seeds")) return "seeds";
     return "home";
   }, [pathname]);

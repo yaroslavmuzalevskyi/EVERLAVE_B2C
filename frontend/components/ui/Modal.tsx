@@ -25,17 +25,12 @@ export default function Modal({ isOpen, onClose, children, className }: ModalPro
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] overflow-y-auto">
-      <button
-        type="button"
-        aria-label="Close modal"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/60"
-      />
-      <div className="relative flex min-h-full items-start justify-center p-4 sm:items-center">
+    <div className="fixed inset-0 z-[120]" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60" />
+      <div className="relative h-full overflow-y-auto overscroll-contain p-4 sm:p-6">
         <div
           className={cn(
-            "relative w-full max-w-5xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[32px] bg-pr_w p-6 text-pr_dg shadow-2xl",
+            "mx-auto w-full max-w-5xl rounded-[32px] bg-pr_w p-6 text-pr_dg shadow-2xl",
             className,
           )}
           onClick={(event) => event.stopPropagation()}
