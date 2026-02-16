@@ -11,7 +11,7 @@ export default function ShopLayout({
     <>
       <Header />
       <AgeGateModal />
-      <main>{children}</main>
+      <main className="pb-6 lg:pb-20">{children}</main>
       <Footer />
     </>
   );
