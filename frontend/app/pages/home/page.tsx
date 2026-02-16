@@ -8,7 +8,7 @@ import Blog from "@/components/sections/blog/Blog";
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col gap-[200px] bg-pr_dg text-white">
+    <div className="flex flex-col gap-[140px] bg-pr_dg pt-[92px] pb-10 text-white sm:pt-[110px] sm:pb-14 lg:gap-[200px] lg:pt-[128px] lg:pb-24">
       <Hero />
       <Categories />
       <NewProducts />
