@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import RequireAuth from "@/components/auth/RequireAuth";
 import {
   fetchCart,
   removeCartItem,
@@ -11,6 +10,7 @@ import {
 } from "@/services/cart";
 import { checkout } from "@/services/orders";
 import { formatPrice } from "@/services/products";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type CartState = Awaited<ReturnType<typeof fetchCart>>;
 
@@ -35,7 +35,9 @@ const initialAddress: AddressState = {
 };
 
 export default function CartPage() {
+  const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const [cart, setCart] = useState<CartState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -109,6 +111,11 @@ export default function CartPage() {
   const handleCheckout = async () => {
     setCheckoutError("");
 
+    if (!isAuthenticated && !disableAuth) {
+      router.push("/signin?next=%2Fcart");
+      return;
+    }
+
     if (!cart || cart.items.length === 0) {
       setCheckoutError("Your cart is empty.");
       return;
@@ -150,9 +157,8 @@ export default function CartPage() {
   };
 
   return (
-    <RequireAuth>
-      <div className="min-h-screen bg-pr_dg text-pr_w">
-        <section className="w-full px-4 pt-[120px] pb-24 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]">
+    <div className="min-h-screen bg-pr_dg text-pr_w">
+      <section className="w-full px-4 pt-[120px] pb-24 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <h1 className="text-2xl font-semibold">Cart</h1>
             {cart?.items?.length ? (
@@ -340,19 +346,28 @@ export default function CartPage() {
                   <p className="mt-3 text-xs text-pr_dr">{checkoutError}</p>
                 ) : null}
 
+                {!isAuthenticated && !disableAuth ? (
+                  <p className="mt-3 text-xs text-pr_dg/70">
+                    Sign in to complete checkout.
+                  </p>
+                ) : null}
+
                 <button
                   type="button"
                   onClick={handleCheckout}
                   disabled={checkoutLoading}
                   className="mt-5 w-full rounded-full bg-pr_dg px-4 py-2 text-sm font-semibold text-pr_w disabled:opacity-60"
                 >
-                  {checkoutLoading ? "Processing..." : "Proceed to checkout"}
+                  {checkoutLoading
+                    ? "Processing..."
+                    : !isAuthenticated && !disableAuth
+                      ? "Sign in to checkout"
+                      : "Proceed to checkout"}
                 </button>
               </div>
             </div>
           )}
-        </section>
-      </div>
-    </RequireAuth>
+      </section>
+    </div>
   );
 }

@@ -22,6 +22,12 @@ const filterOptions = {
     { label: "Featured", value: "featured" },
     { label: "Price: Low to High", value: "price-asc" },
     { label: "Price: High to Low", value: "price-desc" },
+    { label: "THC: High to Low", value: "thc-desc" },
+    { label: "THC: Low to High", value: "thc-asc" },
+    { label: "Yield: High to Low", value: "yield-desc" },
+    { label: "Yield: Low to High", value: "yield-asc" },
+    { label: "Harvest: Fast to Slow", value: "harvest-asc" },
+    { label: "Harvest: Slow to Fast", value: "harvest-desc" },
   ],
   price: [],
 };
@@ -48,12 +54,6 @@ type SeedCardItem = {
     [key: string]: string | undefined;
   };
   geneticBalance?: Record<string, number | undefined>;
-};
-
-const sortMap: Record<string, string | undefined> = {
-  featured: "createdAt:desc",
-  "price-asc": "price:asc",
-  "price-desc": "price:desc",
 };
 
 function getPriceValue(price: string) {
@@ -160,7 +160,7 @@ const selectorOptionsBySlug: Record<
 export default function SeedsPage() {
   const router = useRouter();
   const [openFilter, setOpenFilter] = useState<string | null>(null);
-  const [sorting, setSorting] = useState("");
+  const [sorting, setSorting] = useState("featured");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [search, setSearch] = useState("");
@@ -372,7 +372,6 @@ export default function SeedsPage() {
         const items = await fetchAllProducts({
           q: searchQuery || undefined,
           category: categoryParam || undefined,
-          sort: sortMap[sorting],
           minPrice:
             priceRange.min !== undefined
               ? Math.round(priceRange.min * 100)
@@ -425,7 +424,6 @@ export default function SeedsPage() {
       isMounted = false;
     };
   }, [
-    sorting,
     priceRange,
     categoryParam,
     searchQuery,
@@ -441,27 +439,80 @@ export default function SeedsPage() {
 
   const orderedItems = useMemo(() => {
     if (filteredItems.length === 0) return [];
+    const getSortMetric = (item: SeedCardItem, metric: "thc" | "yield" | "cycle") =>
+      getFilterRange(item, metric)?.max;
 
-    const byDate = [...filteredItems].sort((a, b) => {
+    const compareNumbers = (
+      aValue: number | undefined,
+      bValue: number | undefined,
+      direction: "asc" | "desc",
+    ) => {
+      const a = typeof aValue === "number" && Number.isFinite(aValue) ? aValue : null;
+      const b = typeof bValue === "number" && Number.isFinite(bValue) ? bValue : null;
+
+      if (a === null && b === null) return 0;
+      if (a === null) return 1;
+      if (b === null) return -1;
+      return direction === "asc" ? a - b : b - a;
+    };
+
+    const sorted = [...filteredItems];
+
+    if (sorting === "price-asc") {
+      return sorted.sort((a, b) =>
+        compareNumbers(a.priceValue, b.priceValue, "asc"),
+      );
+    }
+
+    if (sorting === "price-desc") {
+      return sorted.sort((a, b) =>
+        compareNumbers(a.priceValue, b.priceValue, "desc"),
+      );
+    }
+
+    if (sorting === "thc-asc") {
+      return sorted.sort((a, b) =>
+        compareNumbers(getSortMetric(a, "thc"), getSortMetric(b, "thc"), "asc"),
+      );
+    }
+
+    if (sorting === "thc-desc") {
+      return sorted.sort((a, b) =>
+        compareNumbers(getSortMetric(a, "thc"), getSortMetric(b, "thc"), "desc"),
+      );
+    }
+
+    if (sorting === "yield-asc") {
+      return sorted.sort((a, b) =>
+        compareNumbers(getSortMetric(a, "yield"), getSortMetric(b, "yield"), "asc"),
+      );
+    }
+
+    if (sorting === "yield-desc") {
+      return sorted.sort((a, b) =>
+        compareNumbers(getSortMetric(a, "yield"), getSortMetric(b, "yield"), "desc"),
+      );
+    }
+
+    if (sorting === "harvest-asc") {
+      return sorted.sort((a, b) =>
+        compareNumbers(getSortMetric(a, "cycle"), getSortMetric(b, "cycle"), "asc"),
+      );
+    }
+
+    if (sorting === "harvest-desc") {
+      return sorted.sort((a, b) =>
+        compareNumbers(getSortMetric(a, "cycle"), getSortMetric(b, "cycle"), "desc"),
+      );
+    }
+
+    return sorted.sort((a, b) => {
       const aDate = a.createdAt ? Date.parse(a.createdAt) : 0;
       const bDate = b.createdAt ? Date.parse(b.createdAt) : 0;
-      return bDate - aDate;
+      if (bDate !== aDate) return bDate - aDate;
+      return (b.soldCount ?? 0) - (a.soldCount ?? 0);
     });
-    const newest = byDate.slice(0, 4);
-
-    const remainingAfterNew = filteredItems.filter(
-      (item) => !newest.some((newItem) => newItem.productId === item.productId),
-    );
-    const popular = [...remainingAfterNew]
-      .sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0))
-      .slice(0, 4);
-
-    const rest = remainingAfterNew.filter(
-      (item) => !popular.some((popItem) => popItem.productId === item.productId),
-    );
-
-    return [...newest, ...popular, ...rest];
-  }, [filteredItems]);
+  }, [filteredItems, sorting]);
 
   const totalPages = 1;
 

@@ -50,18 +50,12 @@ const Header = () => {
     return "home";
   }, [pathname]);
 
-  const { cartHref, profileHref } = useMemo(() => {
+  const profileHref = useMemo(() => {
     if (isAuthenticated) {
-      return {
-        cartHref: "/cart",
-        profileHref: "/user_profile/profile",
-      };
+      return "/user_profile/profile";
     }
 
-    return {
-      cartHref: "/signin?next=/cart",
-      profileHref: "/signin?next=/user_profile/profile",
-    };
+    return "/signin?next=/user_profile/profile";
   }, [isAuthenticated]);
 
   return (
@@ -74,7 +68,7 @@ const Header = () => {
             <SectionSlider tabs={tabs} activeId={activeId} />
             <div className="flex items-center gap-3">
               <Link
-                href={cartHref}
+                href="/cart"
                 className="flex h-10 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
                 aria-label="Open cart"
               >
@@ -148,7 +142,7 @@ const Header = () => {
             </div>
             <div className="flex items-center justify-center gap-3 py-4">
               <Link
-                href={cartHref}
+                href="/cart"
                 className="flex h-10 w-14 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
                 aria-label="Open cart"
                 onClick={() => setMobileMenuOpen(false)}

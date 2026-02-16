@@ -71,10 +71,12 @@ export default async function NewProducts() {
               title={product.title}
               description={product.description}
               price={product.price}
+              isNew
               imageUrl={product.imageUrl}
               productId={product.productId}
               href={product.slug ? `/products/${product.slug}` : undefined}
               badgeLabel="New"
+              badgeClassName="bg-pr_y text-pr_dg"
             />
           ))
         )}

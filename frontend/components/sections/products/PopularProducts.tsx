@@ -67,11 +67,12 @@ export default async function PopularProducts() {
               title={product.title}
               description={product.description}
               price={product.price}
+              isNew
               imageUrl={product.imageUrl}
               productId={product.productId}
               href={product.slug ? `/products/${product.slug}` : undefined}
               badgeLabel="Popular"
-              badgeClassName="bg-pr_dg text-pr_w"
+              badgeClassName="bg-pr_y text-pr_dg"
             />
           ))
         )}

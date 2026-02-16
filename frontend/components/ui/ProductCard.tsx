@@ -34,7 +34,7 @@ export default function ProductCard({
         {isNew && (
           <span
             className={cn(
-              "absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold",
+              "absolute right-4 top-4 z-10 rounded-full px-3 py-1 text-xs font-semibold shadow-sm",
               badgeClassName,
             )}
           >
