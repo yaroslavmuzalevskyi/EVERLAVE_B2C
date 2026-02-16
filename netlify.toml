@@ -1,0 +1,8 @@
+[build]
+  base = "frontend"
+  command = "yarn build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_TELEMETRY_DISABLED = "1"
