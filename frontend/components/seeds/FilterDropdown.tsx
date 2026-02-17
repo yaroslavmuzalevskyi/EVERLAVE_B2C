@@ -79,7 +79,7 @@ export default function FilterDropdown({
   const maxTitle = maxLabel ?? "Maximum";
 
   return (
-    <div className="relative z-[120] w-full sm:w-auto" data-no-reveal="true">
+    <div className="relative z-20 w-full sm:w-auto sm:z-30" data-no-reveal="true">
       <button
         type="button"
         onClick={() => onToggle(id)}

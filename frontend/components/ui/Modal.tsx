@@ -10,7 +10,12 @@ type ModalProps = {
   className?: string;
 };
 
-export default function Modal({ isOpen, onClose, children, className }: ModalProps) {
+export default function Modal({
+  isOpen,
+  onClose,
+  children,
+  className,
+}: ModalProps) {
   useEffect(() => {
     if (!isOpen) return;
 

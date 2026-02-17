@@ -531,7 +531,7 @@ export default function SeedsPage() {
         <h1 className="mt-2 text-3xl font-semibold">{pageTitle}</h1>
 
         <div
-          className="relative z-[120] mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap"
+          className="relative z-20 mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:z-30"
           data-filter-root
           data-no-reveal="true"
         >
