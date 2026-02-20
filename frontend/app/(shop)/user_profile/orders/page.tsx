@@ -6,6 +6,7 @@ import RequireAuth from "@/components/auth/RequireAuth";
 import UserHeader from "@/components/userProfile/UserHeader";
 import { fetchOrders, Order } from "@/services/orders";
 import { formatPrice } from "@/services/products";
+import { getStoredProfileName } from "@/lib/userProfile";
 
 const fallbackOrders = [
   {
@@ -84,6 +85,9 @@ const buildDisplayOrder = (order: Order): DisplayOrder => {
 };
 
 export default function OrdersPage() {
+  const [userName] = useState(
+    () => getStoredProfileName() || "Stephan Macroski",
+  );
   const [orders, setOrders] = useState<DisplayOrder[]>(fallbackOrders);
   const [rawOrders, setRawOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,7 +163,7 @@ export default function OrdersPage() {
       <div className="min-h-screen bg-pr_dg text-pr_dg">
         <div className="w-full px-4 pb-0 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]">
           <div className="pt-[120px]">
-            <UserHeader activeTab="orders" userName="Stephan Macroski" />
+            <UserHeader activeTab="orders" userName={userName} />
 
             <div className="mt-4 grid gap-6 lg:grid-cols-[260px_1fr]">
               <div className="flex flex-col gap-3 rounded-2xl bg-pr_w p-4">

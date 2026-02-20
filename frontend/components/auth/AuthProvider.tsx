@@ -18,6 +18,10 @@ import {
   setRefreshToken,
 } from "@/lib/authTokens";
 import { syncLegacyGuestCartToApi } from "@/services/cart";
+import {
+  setStoredProfileEmail,
+  setStoredProfileName,
+} from "@/lib/userProfile";
 
 type AuthContextValue = {
   accessToken: string | null;
@@ -238,6 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       applyTokens(tokens);
+      setStoredProfileEmail(normalizedEmail);
       await syncLegacyGuestCartToApi();
     },
     [applyTokens],
@@ -266,6 +271,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = extractAuthTokens(await response.json().catch(() => ({})));
+      setStoredProfileName(name.trim());
+      setStoredProfileEmail(normalizedEmail);
 
       if (data?.accessToken) {
         applyTokens(data);
