@@ -75,15 +75,17 @@ const Header = () => {
           </div>
 
           {/* Burger navigation (<= 1024px) */}
-          <div className="flex h-[70px] sm:h-[80px] md:h-[96px] items-center justify-between lg:hidden">
-            <Logo />
+          <div className="flex h-[70px] max-[537px]:h-[62px] sm:h-[80px] md:h-[96px] items-center justify-between lg:hidden">
+            <div className="max-[537px]:[&_img]:h-7 max-[537px]:[&_img]:w-auto">
+              <Logo />
+            </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="relative p-2 hover:bg-white/10 rounded-lg transition-colors"
+                className="relative rounded-lg p-2 transition-colors hover:bg-white/10 max-[537px]:p-1.5"
                 aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
               >
-                <span className="relative block h-6 w-6">
+                <span className="relative block h-6 w-6 max-[537px]:h-5 max-[537px]:w-5">
                   <Menu
                     size={24}
                     className={cn(
@@ -113,7 +115,7 @@ const Header = () => {
       {mobileMenuMounted && (
         <div
           className={cn(
-            "fixed inset-x-0 top-[70px] z-40 border-b border-white/10 bg-pr_dg/95 backdrop-blur lg:hidden sm:top-[80px] md:top-[96px]",
+            "fixed inset-x-0 top-[70px] z-40 border-b border-white/10 bg-pr_dg/95 backdrop-blur max-[537px]:top-[62px] lg:hidden sm:top-[80px] md:top-[96px]",
             mobileMenuOpen ? "mobile-menu-enter" : "mobile-menu-exit",
           )}
           onAnimationEnd={() => {
@@ -122,7 +124,7 @@ const Header = () => {
         >
           <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6">
             <div className="py-4">
-              <div className="flex items-stretch gap-2">
+              <div className="flex items-stretch gap-2 max-[537px]:flex-col">
                 <div className="min-w-0 flex-1">
                   <SectionSlider
                     tabs={tabs}
@@ -130,10 +132,10 @@ const Header = () => {
                     onNavigate={() => setMobileMenuOpen(false)}
                   />
                 </div>
-                <div className="flex items-stretch gap-2">
+                <div className="flex items-stretch gap-2 max-[537px]:w-full">
                   <Link
                     href="/cart"
-                    className="flex h-full w-[100px] items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0"
+                    className="flex h-full w-[100px] items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0 max-[537px]:h-10 max-[537px]:flex-1 max-[537px]:w-auto"
                     aria-label="Open cart"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -141,7 +143,7 @@ const Header = () => {
                   </Link>
                   <Link
                     href={profileHref}
-                    className="flex h-full w-[100px] items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0"
+                    className="flex h-full w-[100px] items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0 max-[537px]:h-10 max-[537px]:flex-1 max-[537px]:w-auto"
                     aria-label="Open account"
                     onClick={() => setMobileMenuOpen(false)}
                   >

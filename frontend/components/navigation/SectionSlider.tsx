@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { SectionTab } from "@/types/navigation";
@@ -28,21 +34,30 @@ export function SectionSlider({
 
   const updateActivePill = useCallback(() => {
     const navEl = navRef.current;
-    const activeEl = tabRefs.current[activeId];
-    if (!navEl || !activeEl) {
+    if (!navEl) {
       setActivePill((prev) => ({ ...prev, visible: false }));
       return;
     }
 
     const navRect = navEl.getBoundingClientRect();
-    const activeRect = activeEl.getBoundingClientRect();
+    const activeIndex = tabs.findIndex((tab) => tab.id === activeId);
+    if (activeIndex < 0 || tabs.length === 0) {
+      setActivePill((prev) => ({ ...prev, visible: false }));
+      return;
+    }
+
+    const navStyles = window.getComputedStyle(navEl);
+    const padLeft = Number.parseFloat(navStyles.paddingLeft) || 0;
+    const padRight = Number.parseFloat(navStyles.paddingRight) || 0;
+    const innerWidth = Math.max(navRect.width - padLeft - padRight, 0);
+    const segmentWidth = innerWidth / tabs.length;
 
     setActivePill({
-      left: activeRect.left - navRect.left,
-      width: activeRect.width,
+      left: padLeft + activeIndex * segmentWidth,
+      width: segmentWidth,
       visible: true,
     });
-  }, [activeId]);
+  }, [activeId, tabs]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -68,7 +83,7 @@ export function SectionSlider({
   return (
     <nav
       ref={navRef}
-      className="relative flex w-full items-center justify-center gap-2 rounded-full bg-pr_w/95 p-2 lg:w-auto lg:justify-center lg:p-1"
+      className="relative flex w-full items-center justify-center gap-0 rounded-full bg-pr_w/95 p-1.5 lg:w-[500px] lg:justify-center lg:p-1"
     >
       <div
         className={cn(
@@ -81,13 +96,13 @@ export function SectionSlider({
         const isActive = tab.id === activeId;
         const hasDropdown = Boolean(tab.dropdownItems?.length);
         const baseClasses = cn(
-          "relative z-10 flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors duration-200 ease-out",
+          "relative z-10 flex flex-1 items-center justify-center gap-1 rounded-full px-2 py-2 text-center text-sm transition-colors duration-200 ease-out lg:px-4 lg:py-2",
           isActive ? "text-pr_w" : "text-sr_g hover:text-pr_dg",
         );
 
         if (hasDropdown) {
           return (
-            <div key={tab.id} className="relative" data-nav-dropdown>
+            <div key={tab.id} className="relative flex-1" data-nav-dropdown>
               <button
                 ref={(node) => {
                   tabRefs.current[tab.id] = node;
@@ -96,7 +111,7 @@ export function SectionSlider({
                 onClick={() =>
                   setOpenId((prev) => (prev === tab.id ? null : tab.id))
                 }
-                className={baseClasses}
+                className={cn(baseClasses, "w-full")}
               >
                 <span>{tab.label}</span>
                 <ChevronDown
