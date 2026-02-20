@@ -1,8 +1,7 @@
 import Hero from "@/components/sections/hero/Hero";
 import NewProducts from "@/components/sections/products/NewProducts";
 import PopularProducts from "@/components/sections/products/PopularProducts";
-import BestYieldProducts from "@/components/sections/products/BestYieldProducts";
-import BestThcProducts from "@/components/sections/products/BestThcProducts";
+import BestByMetricsProducts from "@/components/sections/products/BestByMetricsProducts";
 import WhyChooseUs from "@/components/sections/why-choose-us/WhyChooseUs";
 import ProofScale from "@/components/sections/proof-scale/ProofScale";
 
@@ -18,8 +17,7 @@ export default function HomePage() {
       </section>
       <NewProducts />
       <PopularProducts />
-      <BestYieldProducts />
-      <BestThcProducts />
+      <BestByMetricsProducts />
       <WhyChooseUs />
       <ProofScale />
     </div>
