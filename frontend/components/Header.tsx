@@ -121,32 +121,34 @@ const Header = () => {
           }}
         >
           <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6">
-            <div className="py-4 border-b border-white/10">
-              <div className="flex justify-center">
-                <SectionSlider
-                  tabs={tabs}
-                  activeId={activeId}
-                  onNavigate={() => setMobileMenuOpen(false)}
-                />
+            <div className="py-4">
+              <div className="flex items-stretch gap-2">
+                <div className="min-w-0 flex-1">
+                  <SectionSlider
+                    tabs={tabs}
+                    activeId={activeId}
+                    onNavigate={() => setMobileMenuOpen(false)}
+                  />
+                </div>
+                <div className="flex items-stretch gap-2">
+                  <Link
+                    href="/cart"
+                    className="flex h-full w-[100px] items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0"
+                    aria-label="Open cart"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href={profileHref}
+                    className="flex h-full w-[100px] items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0"
+                    aria-label="Open account"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <User className="h-4 w-4" />
+                  </Link>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center justify-center gap-3 py-4">
-              <Link
-                href="/cart"
-                className="flex h-10 w-14 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0"
-                aria-label="Open cart"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <ShoppingCart className="h-4 w-4" />
-              </Link>
-              <Link
-                href={profileHref}
-                className="flex h-10 w-14 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0"
-                aria-label="Open account"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <User className="h-4 w-4" />
-              </Link>
             </div>
           </div>
         </div>

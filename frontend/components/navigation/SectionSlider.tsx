@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { SectionTab } from "@/types/navigation";
@@ -8,9 +8,15 @@ type Props = {
   tabs: SectionTab[];
   activeId: string;
   onNavigate?: () => void;
+  rightContent?: ReactNode;
 };
 
-export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
+export function SectionSlider({
+  tabs,
+  activeId,
+  onNavigate,
+  rightContent,
+}: Props) {
   const [openId, setOpenId] = useState<string | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
   const tabRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -62,7 +68,7 @@ export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
   return (
     <nav
       ref={navRef}
-      className="relative flex w-full flex-wrap items-center justify-center gap-2 rounded-full bg-pr_w/95 p-2 lg:w-auto lg:justify-center lg:p-1"
+      className="relative flex w-full items-center justify-center gap-2 rounded-full bg-pr_w/95 p-2 lg:w-auto lg:justify-center lg:p-1"
     >
       <div
         className={cn(
@@ -75,7 +81,7 @@ export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
         const isActive = tab.id === activeId;
         const hasDropdown = Boolean(tab.dropdownItems?.length);
         const baseClasses = cn(
-          "relative z-10 flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-[color,transform] duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0",
+          "relative z-10 flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors duration-200 ease-out",
           isActive ? "text-pr_w" : "text-sr_g hover:text-pr_dg",
         );
 
@@ -197,6 +203,11 @@ export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
           </button>
         );
       })}
+      {rightContent ? (
+        <div className="relative z-10 ml-auto flex items-center gap-2">
+          {rightContent}
+        </div>
+      ) : null}
     </nav>
   );
 }
