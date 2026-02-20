@@ -22,7 +22,7 @@ export default function CategoryCard({
   const card = (
     <div
       className={cn(
-        "flex min-h-[180px] h-full flex-col justify-end border border-white/10 px-6 pb-5 pt-4 transition",
+        "flex min-h-[180px] h-full flex-col justify-end border border-white/10 px-6 pb-5 pt-4 transition-transform duration-200 ease-out hover:-translate-y-1",
         cornerClass,
         active ? "bg-sr_dg text-pr_w" : "bg-pr_w text-pr_dg",
       )}

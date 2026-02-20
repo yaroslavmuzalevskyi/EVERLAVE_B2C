@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { SectionTab } from "@/types/navigation";
@@ -12,6 +12,31 @@ type Props = {
 
 export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const navRef = useRef<HTMLElement | null>(null);
+  const tabRefs = useRef<Record<string, HTMLElement | null>>({});
+  const [activePill, setActivePill] = useState({
+    left: 0,
+    width: 0,
+    visible: false,
+  });
+
+  const updateActivePill = useCallback(() => {
+    const navEl = navRef.current;
+    const activeEl = tabRefs.current[activeId];
+    if (!navEl || !activeEl) {
+      setActivePill((prev) => ({ ...prev, visible: false }));
+      return;
+    }
+
+    const navRect = navEl.getBoundingClientRect();
+    const activeRect = activeEl.getBoundingClientRect();
+
+    setActivePill({
+      left: activeRect.left - navRect.left,
+      width: activeRect.width,
+      visible: true,
+    });
+  }, [activeId]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -24,22 +49,43 @@ export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
     return () => document.removeEventListener("click", handleClick);
   }, []);
 
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(updateActivePill);
+    const onResize = () => window.requestAnimationFrame(updateActivePill);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [updateActivePill, tabs.length]);
+
   return (
-    <nav className="flex w-full flex-wrap items-center justify-center gap-2 rounded-full bg-pr_w/95 p-2 lg:w-auto lg:justify-center lg:p-1">
+    <nav
+      ref={navRef}
+      className="relative flex w-full flex-wrap items-center justify-center gap-2 rounded-full bg-pr_w/95 p-2 lg:w-auto lg:justify-center lg:p-1"
+    >
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-y-1 rounded-full bg-pr_dg shadow-sm transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          activePill.visible ? "opacity-100" : "opacity-0",
+        )}
+        style={{ left: activePill.left, width: activePill.width }}
+      />
       {tabs.map((tab) => {
         const isActive = tab.id === activeId;
         const hasDropdown = Boolean(tab.dropdownItems?.length);
         const baseClasses = cn(
-          "flex items-center gap-2 rounded-full px-4 py-2 text-sm transition",
-          isActive
-            ? "bg-pr_dg text-pr_w shadow-sm"
-            : "text-sr_g hover:text-pr_dg",
+          "relative z-10 flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-[color,transform] duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0",
+          isActive ? "text-pr_w" : "text-sr_g hover:text-pr_dg",
         );
 
         if (hasDropdown) {
           return (
             <div key={tab.id} className="relative" data-nav-dropdown>
               <button
+                ref={(node) => {
+                  tabRefs.current[tab.id] = node;
+                }}
                 type="button"
                 onClick={() =>
                   setOpenId((prev) => (prev === tab.id ? null : tab.id))
@@ -109,6 +155,9 @@ export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
             return (
               <a
                 key={tab.id}
+                ref={(node) => {
+                  tabRefs.current[tab.id] = node;
+                }}
                 href={tab.href}
                 target="_blank"
                 rel="noreferrer"
@@ -123,6 +172,9 @@ export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
           return (
             <Link
               key={tab.id}
+              ref={(node) => {
+                tabRefs.current[tab.id] = node;
+              }}
               href={tab.href}
               className={baseClasses}
               onClick={() => onNavigate?.()}
@@ -133,7 +185,14 @@ export function SectionSlider({ tabs, activeId, onNavigate }: Props) {
         }
 
         return (
-          <button key={tab.id} type="button" className={baseClasses}>
+          <button
+            key={tab.id}
+            ref={(node) => {
+              tabRefs.current[tab.id] = node;
+            }}
+            type="button"
+            className={baseClasses}
+          >
             {tab.label}
           </button>
         );

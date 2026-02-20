@@ -59,14 +59,14 @@ const Header = () => {
             <div className="flex items-center gap-3">
               <Link
                 href="/cart"
-                className="flex h-10 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
+                className="flex h-10 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0"
                 aria-label="Open cart"
               >
                 <ShoppingCart className="h-4 w-4" />
               </Link>
               <Link
                 href={profileHref}
-                className="flex h-10 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
+                className="flex h-10 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0"
                 aria-label="Open account"
               >
                 <User className="h-4 w-4" />
@@ -133,7 +133,7 @@ const Header = () => {
             <div className="flex items-center justify-center gap-3 py-4">
               <Link
                 href="/cart"
-                className="flex h-10 w-14 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
+                className="flex h-10 w-14 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0"
                 aria-label="Open cart"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -141,7 +141,7 @@ const Header = () => {
               </Link>
               <Link
                 href={profileHref}
-                className="flex h-10 w-14 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition hover:bg-pr_w/90"
+                className="flex h-10 w-14 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0"
                 aria-label="Open account"
                 onClick={() => setMobileMenuOpen(false)}
               >

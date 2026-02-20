@@ -56,7 +56,7 @@ export default function WhyChooseUs() {
         {reasons.map((reason) => (
           <article
             key={reason.title}
-            className="relative min-h-[260px] overflow-hidden rounded-tr-[32px] rounded-bl-[32px] border border-pr_w/20 bg-pr_w p-8 text-pr_dg sm:p-9"
+            className="relative min-h-[260px] overflow-hidden rounded-tr-[32px] rounded-bl-[32px] border border-pr_w/20 bg-pr_w p-8 text-pr_dg transition-transform duration-200 ease-out hover:-translate-y-1 sm:p-9"
           >
             <Image
               src={reason.backgroundIcon}

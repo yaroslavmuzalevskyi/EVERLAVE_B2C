@@ -125,7 +125,7 @@ export default function ProductCard({
       {showButton && (
         <AddToCartButton
           productId={productId}
-          className="mt-3 w-full"
+          className="mt-3 w-full hover:translate-y-0 active:translate-y-0"
           variant="category"
         />
       )}

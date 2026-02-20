@@ -70,7 +70,7 @@ function ProofCardItem({
   return (
     <div
       ref={ref}
-      className={`flex h-full min-h-[380px] flex-col items-center justify-between bg-pr_w p-8 text-center text-sr_dg ${
+      className={`flex h-full min-h-[340px] flex-col items-center justify-between bg-pr_w px-8 py-10 text-center text-sr_dg transition-transform duration-200 ease-out hover:-translate-y-1 ${
         isOpposite
           ? "rounded-br-3xl rounded-tl-3xl"
           : "rounded-bl-3xl rounded-tr-3xl"

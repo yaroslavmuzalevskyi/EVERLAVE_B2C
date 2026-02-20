@@ -27,7 +27,7 @@ const Card: React.FC<CardProps> = ({
   return (
     <div
       className={cn(
-        "rounded-bl-3xl rounded-tr-3xl bg-pr_w p-6 text-pr_dg",
+        "rounded-bl-3xl rounded-tr-3xl bg-pr_w p-6 text-pr_dg transition-transform duration-200 ease-out hover:-translate-y-1",
         className,
       )}
       style={computedStyle}
