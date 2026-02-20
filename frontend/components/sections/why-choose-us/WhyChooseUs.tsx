@@ -41,8 +41,8 @@ const reasons = [
 
 export default function WhyChooseUs() {
   return (
-    <section className="w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]">
-      <div className="max-w-3xl">
+    <section className="w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-[130px] ">
+      <div className="max-w-3xl ">
         <h2 className="text-4xl font-semibold text-pr_w sm:text-5xl">
           Why choose us?
         </h2>
@@ -52,11 +52,11 @@ export default function WhyChooseUs() {
         </p>
       </div>
 
-      <div className="mt-10 grid gap-6 md:grid-cols-2">
+      <div className="mt-10 grid gap-6 md:grid-cols-2 ">
         {reasons.map((reason) => (
           <article
             key={reason.title}
-            className="relative min-h-[260px] overflow-hidden rounded-tr-[32px] rounded-bl-[32px] border border-pr_w/20 bg-pr_w p-8 text-pr_dg transition-transform duration-200 ease-out hover:-translate-y-1 sm:p-9"
+            className="relative min-h-[260px] overflow-hidden rounded-tr-[32px] rounded-bl-[32px] border border-pr_w/20 bg-pr_w p-8 text-pr_dg sm:p-9 "
           >
             <Image
               src={reason.backgroundIcon}
