@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 type ModalProps = {
@@ -27,22 +28,25 @@ export default function Modal({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[120]" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60" />
       <div className="relative h-full overflow-y-auto overscroll-contain p-4 sm:p-6">
-        <div
-          className={cn(
-            "mx-auto w-full max-w-5xl rounded-[32px] bg-pr_w p-6 text-pr_dg shadow-2xl",
-            className,
-          )}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {children}
+        <div className="grid min-h-full place-items-center py-4 sm:py-6">
+          <div
+            className={cn(
+              "mx-auto w-full max-w-5xl rounded-[32px] bg-pr_w p-6 text-pr_dg shadow-2xl",
+              className,
+            )}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {children}
+          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
