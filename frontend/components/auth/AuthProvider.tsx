@@ -17,6 +17,7 @@ import {
   setAccessToken,
   setRefreshToken,
 } from "@/lib/authTokens";
+import { syncLegacyGuestCartToApi } from "@/services/cart";
 
 type AuthContextValue = {
   accessToken: string | null;
@@ -142,11 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const response = await fetchAuthWithFallback("/auth/refresh", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            // Support both refresh payload formats.
-            body: JSON.stringify({
-              refreshToken: storedRefresh,
-              token: storedRefresh,
-            }),
+            body: JSON.stringify({ token: storedRefresh }),
           });
           if (response.ok) {
             const data = extractAuthTokens(
@@ -241,6 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       applyTokens(tokens);
+      await syncLegacyGuestCartToApi();
     },
     [applyTokens],
   );
@@ -271,6 +269,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data?.accessToken) {
         applyTokens(data);
+        await syncLegacyGuestCartToApi();
         return;
       }
 
@@ -296,7 +295,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       clearTokens();
       setAccessTokenState(null);
-      router.push("/");
+      router.push("/signin");
     }
   }, [router]);
 

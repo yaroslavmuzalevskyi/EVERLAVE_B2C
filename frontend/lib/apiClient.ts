@@ -16,6 +16,8 @@ type AuthTokenPair = {
   refreshToken?: string;
 };
 
+let refreshInFlight: Promise<AuthTokenPair | null> | null = null;
+
 function getStringToken(
   source: Record<string, unknown> | undefined,
   keys: string[],
@@ -96,6 +98,45 @@ async function fetchWithFallback(
   throw new Error("Failed to fetch");
 }
 
+async function requestTokenRefresh(refreshToken: string) {
+  const payloads = [{ token: refreshToken }, { refreshToken }];
+
+  for (let index = 0; index < payloads.length; index += 1) {
+    const refreshResponse = await fetchWithFallback(
+      "/auth/refresh",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payloads[index]),
+      },
+      true,
+    );
+
+    if (!refreshResponse.ok) {
+      const shouldTryNext =
+        index < payloads.length - 1 &&
+        [400, 401, 404, 422].includes(refreshResponse.status);
+      if (shouldTryNext) {
+        continue;
+      }
+      return null;
+    }
+
+    return extractAuthTokens(await refreshResponse.json().catch(() => ({})));
+  }
+
+  return null;
+}
+
+async function refreshAccessToken(refreshToken: string) {
+  if (!refreshInFlight) {
+    refreshInFlight = requestTokenRefresh(refreshToken).finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
 type ApiFetchOptions = {
   onUnauthorized?: () => void;
 };
@@ -130,32 +171,14 @@ export async function apiFetch(
     return response;
   }
 
-  const refreshResponse = await fetchWithFallback(
-    "/auth/refresh",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // Support both backend payload variants while keeping backward compatibility.
-      body: JSON.stringify({ refreshToken, token: refreshToken }),
-    },
-    true,
-  );
-
-  if (!refreshResponse.ok) {
+  const data = await refreshAccessToken(refreshToken);
+  if (!data?.accessToken) {
     clearTokens();
     options.onUnauthorized?.();
     return response;
   }
-
-  const data = extractAuthTokens(await refreshResponse.json().catch(() => ({})));
-  if (data?.accessToken) {
-    setAccessToken(data.accessToken);
-    headers.set("Authorization", `Bearer ${data.accessToken}`);
-  } else {
-    clearTokens();
-    options.onUnauthorized?.();
-    return response;
-  }
+  setAccessToken(data.accessToken);
+  headers.set("Authorization", `Bearer ${data.accessToken}`);
   if (data?.refreshToken) {
     setRefreshToken(data.refreshToken);
   }

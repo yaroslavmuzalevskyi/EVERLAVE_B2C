@@ -1,42 +1,64 @@
-import Image from "next/image";
-import Card from "@/components/ui/Card";
-import Link from "next/link";
+"use client";
 
-export default function Hero() {
+import Button from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+
+type HeroProps = {
+  contentWidthClass?: string;
+  className?: string;
+  sectionId?: string;
+};
+
+export default function Hero({
+  contentWidthClass = "w-full",
+  className,
+  sectionId = "home",
+}: HeroProps) {
+  const router = useRouter();
+
+  const handleCatalogClick = () => {
+    if (typeof window === "undefined") return;
+
+    const openCatalogEvent = new CustomEvent("open-catalog-modal", {
+      cancelable: true,
+    });
+    const shouldFallbackToProducts = window.dispatchEvent(openCatalogEvent);
+    if (shouldFallbackToProducts) {
+      router.push("/seeds?tab=products");
+    }
+  };
+
   return (
     <section
-      id="home"
-      className="w-full px-4 pt-12 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]"
+      id={sectionId}
+      className={cn(
+        "mt-[150px] w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]",
+        className,
+      )}
     >
-      <Card
-        width="100%"
-        height="450px"
-        className="relative flex flex-col justify-end overflow-hidden px-6 py-10 shadow-[0_20px_60px_rgba(3,44,30,0.18)] sm:px-8 lg:px-10"
+      <div
+        className={cn(
+          "mx-auto flex w-full flex-col items-center gap-5 text-center",
+          contentWidthClass,
+        )}
       >
-        <Image
-          src="/icons/grow.svg"
-          alt=""
-          width={640}
-          height={640}
-          className="pointer-events-none absolute left-2/3 top-1/2 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 opacity-70 sm:h-[420px] sm:w-[420px] lg:h-[520px] lg:w-[520px]"
-          priority
-        />
-        <div className="relative z-10 max-w-3xl">
-          <h1 className="text-balance text-3xl font-extrabold leading-tight text-pr_dg sm:text-4xl lg:text-5xl xl:text-6xl">
-            Black Friday Starts Now!
-          </h1>
-          <p className=" text-pretty text-sm text-sr_g sm:text-base lg:text-lg">
-            Stable and repeatable performance with tested yields, resilience,
-            and predictable results.
-          </p>
-          <Link
-            href="/seeds?tab=products"
-            className="mt-3 inline-flex items-center justify-center rounded-full bg-pr_dg px-6 py-3 text-sm font-semibold text-pr_w transition hover:bg-sr_dg"
-          >
-            Explore Now!
-          </Link>
-        </div>
-      </Card>
+        <h1 className="animated-gradient-text w-full text-[clamp(3rem,7.9vw,8.2rem)] leading-[0.97] font-extrabold tracking-[-0.02em]">
+          Where Nature Meets Precision.
+        </h1>
+        <p className="display-md_thin max-w-3xl text-pr_w/75">
+          Professional-grade cannabis genetics for licensed businesses.
+          <br className="hidden sm:block" />
+          Certified. Compliant. Consistent.
+        </p>
+        <Button
+          variant="category"
+          onClick={handleCatalogClick}
+          className="px-7 py-3 text-base font-semibold"
+        >
+          Explore Now!
+        </Button>
+      </div>
     </section>
   );
 }
