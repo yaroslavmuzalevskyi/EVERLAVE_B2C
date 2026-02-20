@@ -188,6 +188,7 @@ export default function SeedsPage() {
   const filterKey = useMemo(() => JSON.stringify(filterValues), [filterValues]);
   const pageTitle = categoryParam ? toTitleCase(categoryParam) : "All Products";
   const breadcrumbLabel = categoryParam ? pageTitle : "All Categories";
+  const backendSort = sorting || "featured";
 
   useEffect(() => {
     const syncCategoryFromUrl = () => {
@@ -380,6 +381,7 @@ export default function SeedsPage() {
             priceRange.max !== undefined
               ? Math.round(priceRange.max * 100)
               : undefined,
+          sort: backendSort,
           filters: filtersQuery,
         });
 
@@ -425,6 +427,7 @@ export default function SeedsPage() {
     };
   }, [
     priceRange,
+    backendSort,
     categoryParam,
     searchQuery,
     categoryFilters,
