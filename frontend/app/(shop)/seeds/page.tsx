@@ -2,14 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import FilterDropdown from "@/components/seeds/FilterDropdown";
 import ProductCard from "@/components/ui/ProductCard";
 import {
-  fetchCategories,
   fetchCategoryFilters,
   type CategoryFilter,
-  type CategoryItem,
 } from "@/services/categories";
 import {
   fetchAllProducts,
@@ -36,6 +33,22 @@ const filterOptions = {
   price: [],
 };
 
+const FIXED_CATEGORY_SLUG = "cannabis-seeds";
+
+const GENETICS_RATIO_OPTIONS: Array<{
+  label: string;
+  indica: number;
+  sativa: number;
+}> = [
+  { label: "20/80", indica: 20, sativa: 80 },
+  { label: "30/70", indica: 30, sativa: 70 },
+  { label: "40/60", indica: 40, sativa: 60 },
+  { label: "50/50", indica: 50, sativa: 50 },
+  { label: "60/40", indica: 60, sativa: 40 },
+  { label: "70/30", indica: 70, sativa: 30 },
+  { label: "80/20", indica: 80, sativa: 20 },
+];
+
 type SeedCardItem = {
   productId: string;
   slug: string;
@@ -60,22 +73,6 @@ type SeedCardItem = {
   };
   geneticBalance?: Record<string, number | undefined>;
 };
-
-function getPriceValue(price: string) {
-  const numeric = Number(price.replace("€", "").trim());
-  return Number.isNaN(numeric) ? 0 : numeric;
-}
-
-function getTextValue(item: SeedCardItem) {
-  if (item.text) return item.text;
-  return `${item.title} ${item.description}`.toLowerCase();
-}
-
-function toTitleCase(value: string) {
-  return value
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
 
 function slugifyFilterKey(value: string) {
   return value
@@ -163,15 +160,12 @@ const selectorOptionsBySlug: Record<
 };
 
 export default function SeedsPage() {
-  const router = useRouter();
   const [openFilter, setOpenFilter] = useState<string | null>(null);
   const [sorting, setSorting] = useState("featured");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [search, setSearch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [categories, setCategories] = useState<CategoryItem[]>([]);
-  const [categorySelection, setCategorySelection] = useState("");
   const [categoryFilters, setCategoryFilters] = useState<CategoryFilter[]>([]);
   const [filtersLoading, setFiltersLoading] = useState(false);
   const [filtersError, setFiltersError] = useState("");
@@ -184,29 +178,16 @@ export default function SeedsPage() {
   const [multiSelections, setMultiSelections] = useState<Record<string, string[]>>(
     {},
   );
+  const [geneticsRatio, setGeneticsRatio] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [items, setItems] = useState<SeedCardItem[]>([]);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [categoryParam, setCategoryParam] = useState("");
   const filterKey = useMemo(() => JSON.stringify(filterValues), [filterValues]);
-  const pageTitle = categoryParam ? toTitleCase(categoryParam) : "All Products";
-  const breadcrumbLabel = categoryParam ? pageTitle : "All Categories";
+  const categoryParam = FIXED_CATEGORY_SLUG;
+  const pageTitle = "All Products";
+  const breadcrumbLabel = "Cannabis";
   const backendSort = sorting || "featured";
-
-  useEffect(() => {
-    const syncCategoryFromUrl = () => {
-      const value =
-        new URLSearchParams(window.location.search).get("category")?.toLowerCase() ??
-        "";
-      setCategoryParam(value);
-    };
-
-    syncCategoryFromUrl();
-    window.addEventListener("popstate", syncCategoryFromUrl);
-    return () => window.removeEventListener("popstate", syncCategoryFromUrl);
-  }, []);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -228,36 +209,6 @@ export default function SeedsPage() {
 
   useEffect(() => {
     let mounted = true;
-    fetchCategories()
-      .then((data) => {
-        if (!mounted) return;
-        setCategories(data);
-      })
-      .catch(() => {
-        if (!mounted) return;
-        setCategories([]);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    setCategorySelection(categoryParam);
-  }, [categoryParam]);
-
-
-  useEffect(() => {
-    let mounted = true;
-    if (!categoryParam) {
-      setCategoryFilters([]);
-      setFilterValues({});
-      setFilterSelections({});
-      setMultiSelections({});
-      setFiltersError("");
-      setFiltersLoading(false);
-      return;
-    }
 
     setFiltersLoading(true);
     setFiltersError("");
@@ -282,6 +233,39 @@ export default function SeedsPage() {
     };
   }, [categoryParam]);
 
+  const indicaFilter = useMemo(
+    () =>
+      categoryFilters.find((filter) => {
+        const source = `${filter.slug} ${filter.name}`.toLowerCase();
+        return source.includes("indica");
+      }),
+    [categoryFilters],
+  );
+
+  const sativaFilter = useMemo(
+    () =>
+      categoryFilters.find((filter) => {
+        const source = `${filter.slug} ${filter.name}`.toLowerCase();
+        return source.includes("sativa");
+      }),
+    [categoryFilters],
+  );
+
+  const hasMergedGeneticsFilter = Boolean(indicaFilter && sativaFilter);
+
+  const visibleCategoryFilters = useMemo(() => {
+    if (!hasMergedGeneticsFilter) return categoryFilters;
+    return categoryFilters.filter(
+      (filter) =>
+        filter.slug !== indicaFilter?.slug && filter.slug !== sativaFilter?.slug,
+    );
+  }, [
+    categoryFilters,
+    hasMergedGeneticsFilter,
+    indicaFilter?.slug,
+    sativaFilter?.slug,
+  ]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [
@@ -289,10 +273,10 @@ export default function SeedsPage() {
     minPrice,
     maxPrice,
     searchQuery,
-    categoryParam,
     filterKey,
     filterSelections,
     multiSelections,
+    geneticsRatio,
   ]);
 
   const filterOptionsBySlug = useMemo(() => {
@@ -415,11 +399,9 @@ export default function SeedsPage() {
           }));
 
         setItems(mapped);
-        setTotal(mapped.length);
       } catch {
         if (!isMounted) return;
         setItems([]);
-        setTotal(0);
         setError("Failed to load products.");
       } finally {
         if (isMounted) setLoading(false);
@@ -545,33 +527,6 @@ export default function SeedsPage() {
           data-no-reveal="true"
         >
           <FilterDropdown
-            id="category"
-            label="Category"
-            options={[
-              { label: "All Categories", value: "" },
-              ...categories.map((category) => ({
-                label: category.name,
-                value: category.slug,
-              })),
-            ]}
-            selected={categorySelection}
-            open={openFilter === "category"}
-            onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
-            onSelect={(id, value) => {
-              setCategorySelection(value);
-              const params = new URLSearchParams(window.location.search);
-              if (value) {
-                params.set("category", value);
-              } else {
-                params.delete("category");
-              }
-              setCategoryParam(value.toLowerCase());
-              router.push(`/products${params.toString() ? `?${params}` : ""}`);
-              setOpenFilter(null);
-            }}
-            placeholder="Category"
-          />
-          <FilterDropdown
             id="sorting"
             label="Sorting"
             options={filterOptions.sorting}
@@ -603,11 +558,49 @@ export default function SeedsPage() {
               setMaxPrice(value);
             }}
           />
-          {!categoryParam ? (
-            <span className="flex items-center text-xs text-pr_w/60 sm:px-1">
-              Select a category to see more filters
-            </span>
-          ) : filtersLoading ? (
+          {hasMergedGeneticsFilter ? (
+            <FilterDropdown
+              id="genetics-ratio"
+              label="Indica/Sativa"
+              options={GENETICS_RATIO_OPTIONS.map((option) => ({
+                label: option.label,
+                value: option.label,
+              }))}
+              selected={geneticsRatio}
+              open={openFilter === "genetics-ratio"}
+              onToggle={(id) => setOpenFilter(openFilter === id ? null : id)}
+              onSelect={(id, value) => {
+                setGeneticsRatio(value);
+                const ratio = GENETICS_RATIO_OPTIONS.find(
+                  (option) => option.label === value,
+                );
+                if (!value || !ratio || !indicaFilter || !sativaFilter) {
+                  setFilterValues((prev) => ({
+                    ...prev,
+                    ...(indicaFilter ? { [indicaFilter.slug]: {} } : {}),
+                    ...(sativaFilter ? { [sativaFilter.slug]: {} } : {}),
+                  }));
+                  setOpenFilter(null);
+                  return;
+                }
+
+                setFilterValues((prev) => ({
+                  ...prev,
+                  [indicaFilter.slug]: {
+                    min: String(ratio.indica),
+                    max: String(ratio.indica),
+                  },
+                  [sativaFilter.slug]: {
+                    min: String(ratio.sativa),
+                    max: String(ratio.sativa),
+                  },
+                }));
+                setOpenFilter(null);
+              }}
+              placeholder="Indica/Sativa"
+            />
+          ) : null}
+          {filtersLoading ? (
             <span className="flex items-center text-xs text-pr_w/60 sm:px-1">
               Loading filters...
             </span>
@@ -616,7 +609,7 @@ export default function SeedsPage() {
               {filtersError || "No filters for this category."}
             </span>
           ) : null}
-          {categoryFilters.map((filter) => (
+          {visibleCategoryFilters.map((filter) => (
             (() => {
               const selectorOptions = selectorOptionsBySlug[filter.slug];
               const derivedOptions = filterOptionsBySlug[filter.slug] ?? [];

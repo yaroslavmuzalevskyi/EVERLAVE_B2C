@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import { cn } from "@/lib/utils";
 
 type SeedVariantPurchaseProps = {
   productSlug: string;
   variants: Array<{ label: string; price: string }>;
+  details?: ReactNode;
 };
 
 function parseQtyFromLabel(label: string) {
@@ -20,6 +22,7 @@ function parseQtyFromLabel(label: string) {
 export default function SeedVariantPurchase({
   productSlug,
   variants,
+  details,
 }: SeedVariantPurchaseProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -35,8 +38,8 @@ export default function SeedVariantPurchase({
   const selectedQty = options[selectedIndex]?.qty ?? 1;
 
   return (
-    <>
-      <div className="mt-2 flex flex-wrap gap-2">
+    <div className="mt-2 flex h-full flex-col">
+      <div className="flex flex-wrap gap-2">
         {options.map((variant, index) => (
           <button
             key={`${variant.label}-${index}`}
@@ -54,12 +57,18 @@ export default function SeedVariantPurchase({
         ))}
       </div>
 
+      {details ? (
+        <div className="mt-5 flex flex-1 items-center">
+          <div className="w-full">{details}</div>
+        </div>
+      ) : null}
+
       <AddToCartButton
         productId={productSlug}
         qty={selectedQty}
         variant="primary"
         className="mt-5 w-full"
       />
-    </>
+    </div>
   );
 }

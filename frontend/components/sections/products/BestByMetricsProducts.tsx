@@ -15,8 +15,8 @@ import {
 type ProductCardItem = {
   metricKey: string;
   badgeLabel: string;
-  productId?: string;
-  slug?: string;
+  productId: string;
+  slug: string;
   title: string;
   description: string;
   price: string;
@@ -125,13 +125,13 @@ const METRICS: MetricDefinition[] = [
     },
   },
   {
-    key: "flowering",
-    badgeLabel: "Best Flowering Cycle",
+    key: "height",
+    badgeLabel: "Best Height",
     rankMode: "max",
     getScore: (item) => {
       const values = [
-        { value: item.content?.facts?.floweringCycle, mode: "max" as const },
-        ...collectFilterValues(item, ["flowering", "cycle"]).map((value) => ({
+        { value: item.content?.facts?.height, mode: "max" as const },
+        ...collectFilterValues(item, ["height"]).map((value) => ({
           value,
           mode: "max" as const,
         })),
@@ -169,9 +169,8 @@ export default async function BestByMetricsProducts() {
     const candidates = items.filter(
       (item): item is ProductListItem & { slug: string } => Boolean(item.slug),
     );
-    const usedSlugs = new Set<string>();
 
-    products = METRICS.map((metric) => {
+    products = METRICS.reduce<ProductCardItem[]>((acc, metric) => {
       const ranked = candidates
         .map((item) => ({
           item,
@@ -189,12 +188,10 @@ export default async function BestByMetricsProducts() {
           compareByMetric(a.item, b.item, a.score, b.score, metric.rankMode),
         );
 
-      const pick =
-        ranked.find((entry) => !usedSlugs.has(entry.item.slug)) ?? ranked[0];
-      if (!pick) return null;
-      usedSlugs.add(pick.item.slug);
+      const pick = ranked[0];
+      if (!pick) return acc;
 
-      return {
+      acc.push({
         metricKey: metric.key,
         badgeLabel: metric.badgeLabel,
         productId: pick.item.slug,
@@ -204,8 +201,10 @@ export default async function BestByMetricsProducts() {
         price: formatPrice(pick.item.priceCents, pick.item.currency),
         imageUrl: getPrimaryImageUrl(pick.item.images),
         hoverInfo: buildProductHoverInfo(pick.item),
-      };
-    }).filter((entry): entry is ProductCardItem => Boolean(entry));
+      });
+
+      return acc;
+    }, []);
   } catch {
     products = [];
   }
@@ -240,7 +239,7 @@ export default async function BestByMetricsProducts() {
               imageUrl={product.imageUrl}
               hoverInfo={product.hoverInfo}
               productId={product.productId}
-              href={product.slug ? `/products/${product.slug}` : undefined}
+              href={`/products/${product.slug}`}
               badgeLabel={product.badgeLabel}
               badgeClassName="bg-pr_y text-pr_dg"
             />
