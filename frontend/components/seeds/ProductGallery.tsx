@@ -24,11 +24,15 @@ export default function ProductGallery({ title, images = [] }: ProductGalleryPro
   return (
     <>
       {urls.length > 0 ? (
-        <button type="button" onClick={() => openAt(0)} className="block w-full">
+        <button
+          type="button"
+          onClick={() => openAt(0)}
+          className="block w-full overflow-hidden rounded-2xl bg-sr_dg/70"
+        >
           <img
             src={urls[0]}
             alt={title}
-            className="block h-[320px] w-full rounded-2xl object-cover sm:h-[420px]"
+            className="block h-[320px] w-full object-contain sm:h-[420px]"
           />
         </button>
       ) : (
@@ -41,12 +45,9 @@ export default function ProductGallery({ title, images = [] }: ProductGalleryPro
               key={`${url}-${idx}`}
               type="button"
               onClick={() => openAt(idx + 1)}
+              className="h-16 w-16 overflow-hidden rounded-xl bg-sr_dg/70"
             >
-              <img
-                src={url}
-                alt=""
-                className="h-16 w-16 rounded-xl object-cover"
-              />
+              <img src={url} alt="" className="h-full w-full object-contain" />
             </button>
           ))
         ) : (
