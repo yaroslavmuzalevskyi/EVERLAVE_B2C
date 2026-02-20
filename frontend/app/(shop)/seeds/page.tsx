@@ -16,6 +16,10 @@ import {
   formatPrice,
   getPrimaryImageUrl,
 } from "@/services/products";
+import {
+  buildProductHoverInfo,
+  type ProductHoverInfoRow,
+} from "@/lib/productHoverInfo";
 
 const filterOptions = {
   sorting: [
@@ -39,6 +43,7 @@ type SeedCardItem = {
   description: string;
   price: string;
   imageUrl?: string;
+  hoverInfo: ProductHoverInfoRow[];
   category?: string;
   priceValue?: number;
   text?: string;
@@ -398,6 +403,7 @@ export default function SeedsPage() {
             description: item.content?.description ?? "Premium product",
             price: formatPrice(item.priceCents, item.currency),
             imageUrl: getPrimaryImageUrl(item.images),
+            hoverInfo: buildProductHoverInfo(item),
             category: item.category?.slug ?? item.category?.name,
             priceValue: item.priceCents / 100,
             text: `${item.name} ${item.content?.description ?? ""}`.toLowerCase(),
@@ -856,6 +862,7 @@ export default function SeedsPage() {
                   productId={seed.productId}
                   href={`/products/${seed.slug}`}
                   imageUrl={seed.imageUrl}
+                  hoverInfo={seed.hoverInfo}
                 />
               ))}
         </div>

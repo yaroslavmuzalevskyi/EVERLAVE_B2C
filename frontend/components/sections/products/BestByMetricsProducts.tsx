@@ -7,6 +7,10 @@ import {
   getPrimaryImageUrl,
   type ProductListItem,
 } from "@/services/products";
+import {
+  buildProductHoverInfo,
+  type ProductHoverInfoRow,
+} from "@/lib/productHoverInfo";
 
 type ProductCardItem = {
   metricKey: string;
@@ -17,6 +21,7 @@ type ProductCardItem = {
   description: string;
   price: string;
   imageUrl?: string;
+  hoverInfo: ProductHoverInfoRow[];
 };
 
 type MetricRankMode = "max" | "min";
@@ -198,6 +203,7 @@ export default async function BestByMetricsProducts() {
         description: pick.item.content?.description ?? "Premium product",
         price: formatPrice(pick.item.priceCents, pick.item.currency),
         imageUrl: getPrimaryImageUrl(pick.item.images),
+        hoverInfo: buildProductHoverInfo(pick.item),
       };
     }).filter((entry): entry is ProductCardItem => Boolean(entry));
   } catch {
@@ -232,6 +238,7 @@ export default async function BestByMetricsProducts() {
               price={product.price}
               isNew
               imageUrl={product.imageUrl}
+              hoverInfo={product.hoverInfo}
               productId={product.productId}
               href={product.slug ? `/products/${product.slug}` : undefined}
               badgeLabel={product.badgeLabel}

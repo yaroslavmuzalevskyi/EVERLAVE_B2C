@@ -6,6 +6,10 @@ import {
   formatPrice,
   getPrimaryImageUrl,
 } from "@/services/products";
+import {
+  buildProductHoverInfo,
+  type ProductHoverInfoRow,
+} from "@/lib/productHoverInfo";
 
 type ProductCardItem = {
   productId?: string;
@@ -14,6 +18,7 @@ type ProductCardItem = {
   description: string;
   price: string;
   imageUrl?: string;
+  hoverInfo: ProductHoverInfoRow[];
 };
 
 export default async function PopularProducts() {
@@ -45,6 +50,7 @@ export default async function PopularProducts() {
         description: item.content?.description ?? "Premium product",
         price: formatPrice(item.priceCents, item.currency),
         imageUrl: getPrimaryImageUrl(item.images),
+        hoverInfo: buildProductHoverInfo(item),
       }));
   } catch {
     products = [];
@@ -76,6 +82,7 @@ export default async function PopularProducts() {
               price={product.price}
               isNew
               imageUrl={product.imageUrl}
+              hoverInfo={product.hoverInfo}
               productId={product.productId}
               href={product.slug ? `/products/${product.slug}` : undefined}
               badgeLabel="Popular"
