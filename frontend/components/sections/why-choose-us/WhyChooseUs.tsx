@@ -56,7 +56,8 @@ export default function WhyChooseUs() {
         {reasons.map((reason) => (
           <article
             key={reason.title}
-            className="relative min-h-[260px] overflow-hidden rounded-tr-[32px] rounded-bl-[32px] border border-pr_w/20 bg-pr_w p-8 text-pr_dg sm:p-9 "
+            data-no-reveal="true"
+            className="relative min-h-[260px] overflow-hidden rounded-tr-[32px] rounded-bl-[32px] border border-pr_w/20 bg-pr_w p-8 text-pr_dg transform-gpu transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1.5 sm:p-9"
           >
             <Image
               src={reason.backgroundIcon}

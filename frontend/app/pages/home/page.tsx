@@ -7,7 +7,7 @@ import ProofScale from "@/components/sections/proof-scale/ProofScale";
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col gap-[140px] bg-pr_dg pb-10 text-white [&_button]:transform-none [&_button]:transition-none [&_button:hover]:translate-y-0 [&_button:active]:translate-y-0 sm:pb-14 lg:gap-[200px] lg:pb-24">
+    <div className="flex flex-col gap-[140px] bg-pr_dg pb-10 text-white sm:pb-14 lg:gap-[200px] lg:pb-24">
       <section className="relative isolate overflow-hidden pt-[92px] sm:pt-[110px] lg:pt-[128px]">
         <div
           aria-hidden="true"

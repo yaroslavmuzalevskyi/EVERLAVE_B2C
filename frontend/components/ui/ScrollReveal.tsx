@@ -15,7 +15,6 @@ const TARGET_SELECTOR = [
   "main h6",
   "main p",
   "main li",
-  "main button",
   "main img",
   "main form",
   "main ul",
