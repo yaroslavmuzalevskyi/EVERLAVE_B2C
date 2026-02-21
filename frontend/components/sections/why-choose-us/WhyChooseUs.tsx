@@ -71,9 +71,9 @@ export default function WhyChooseUs() {
                   src={reason.badgeIcon}
                   alt=""
                   aria-hidden
-                  width={22}
-                  height={22}
-                  className="h-[22px] w-[22px]"
+                  width={64}
+                  height={64}
+                  className="h-[64px] w-[64px]"
                 />
               </div>
 

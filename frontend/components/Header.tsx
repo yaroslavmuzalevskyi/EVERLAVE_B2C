@@ -25,6 +25,7 @@ const tabs: SectionTab[] = [
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuMounted, setMobileMenuMounted] = useState(false);
+  const [cartPulse, setCartPulse] = useState(false);
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
 
@@ -32,6 +33,22 @@ const Header = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (mobileMenuOpen) setMobileMenuMounted(true);
   }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const handleCartAdded = () => {
+      setCartPulse(true);
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => setCartPulse(false), 1000);
+    };
+
+    window.addEventListener("cart-item-added", handleCartAdded);
+    return () => {
+      window.removeEventListener("cart-item-added", handleCartAdded);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []);
 
   const activeId = useMemo(() => {
     if (pathname === "/") return "home";
@@ -59,9 +76,23 @@ const Header = () => {
             <div className="flex items-center gap-3">
               <Link
                 href="/cart"
-                className="flex h-10 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0"
+                className={cn(
+                  "relative flex h-10 w-16 items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0",
+                  cartPulse && "scale-110",
+                )}
                 aria-label="Open cart"
               >
+                <span
+                  className={cn(
+                    "pointer-events-none absolute right-1.5 top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-pr_dg text-[10px] font-bold text-pr_w transition-all duration-300",
+                    cartPulse
+                      ? "translate-y-0 scale-100 opacity-100"
+                      : "translate-y-1 scale-75 opacity-0",
+                  )}
+                  aria-hidden
+                >
+                  +
+                </span>
                 <ShoppingCart className="h-4 w-4" />
               </Link>
               <Link
@@ -135,10 +166,24 @@ const Header = () => {
                 <div className="flex items-stretch gap-2 max-[537px]:w-full">
                   <Link
                     href="/cart"
-                    className="flex h-full w-[100px] items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0 max-[537px]:h-10 max-[537px]:flex-1 max-[537px]:w-auto"
+                    className={cn(
+                      "relative flex h-full w-[100px] items-center justify-center rounded-full bg-pr_w text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_w/90 active:translate-y-0 max-[537px]:h-10 max-[537px]:flex-1 max-[537px]:w-auto",
+                      cartPulse && "scale-105",
+                    )}
                     aria-label="Open cart"
                     onClick={() => setMobileMenuOpen(false)}
                   >
+                    <span
+                      className={cn(
+                        "pointer-events-none absolute right-2 top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-pr_dg text-[10px] font-bold text-pr_w transition-all duration-300",
+                        cartPulse
+                          ? "translate-y-0 scale-100 opacity-100"
+                          : "translate-y-1 scale-75 opacity-0",
+                      )}
+                      aria-hidden
+                    >
+                      +
+                    </span>
                     <ShoppingCart className="h-4 w-4" />
                   </Link>
                   <Link

@@ -37,16 +37,16 @@ const FIXED_CATEGORY_SLUG = "cannabis-seeds";
 
 const GENETICS_RATIO_OPTIONS: Array<{
   label: string;
-  indica: number;
-  sativa: number;
+  indicaMin: number;
+  indicaMax: number;
+  sativaMin: number;
+  sativaMax: number;
 }> = [
-  { label: "20/80", indica: 20, sativa: 80 },
-  { label: "30/70", indica: 30, sativa: 70 },
-  { label: "40/60", indica: 40, sativa: 60 },
-  { label: "50/50", indica: 50, sativa: 50 },
-  { label: "60/40", indica: 60, sativa: 40 },
-  { label: "70/30", indica: 70, sativa: 30 },
-  { label: "80/20", indica: 80, sativa: 20 },
+  { label: "65/35", indicaMin: 63, indicaMax: 67, sativaMin: 33, sativaMax: 37 },
+  { label: "60/40", indicaMin: 58, indicaMax: 62, sativaMin: 38, sativaMax: 42 },
+  { label: "55/45", indicaMin: 53, indicaMax: 57, sativaMin: 43, sativaMax: 47 },
+  { label: "50/50", indicaMin: 48, indicaMax: 52, sativaMin: 48, sativaMax: 52 },
+  { label: "45/55", indicaMin: 43, indicaMax: 47, sativaMin: 53, sativaMax: 57 },
 ];
 
 type SeedCardItem = {
@@ -124,38 +124,31 @@ const selectorOptionsBySlug: Record<
   Array<{ label: string; min?: number; max?: number }>
 > = {
   thc: [
-    { label: "0–10%", min: 0, max: 10 },
-    { label: "10–20%", min: 10, max: 20 },
-    { label: "20–30%", min: 20, max: 30 },
-    { label: "30%+", min: 30 },
+    { label: "High (up to 25%)", min: 23, max: 25 },
+    { label: "Middle (up to 23%)", min: 22, max: 23 },
+    { label: "Low (up to 22%)", min: 0, max: 22 },
   ],
   yield: [
-    { label: "0–400 g/m²", min: 0, max: 400 },
-    { label: "400–500 g/m²", min: 400, max: 500 },
-    { label: "500–650 g/m²", min: 500, max: 650 },
-    { label: "650+ g/m²", min: 650 },
+    { label: "Up to 600 g", min: 0, max: 600 },
+    { label: "Up to 650 g", min: 0, max: 650 },
+    { label: "Up to 680 g", min: 0, max: 680 },
+    { label: "Up to 700 g", min: 0, max: 700 },
   ],
   height: [
-    { label: "0–60 cm", min: 0, max: 60 },
-    { label: "60–120 cm", min: 60, max: 120 },
-    { label: "120–180 cm", min: 120, max: 180 },
-    { label: "180+ cm", min: 180 },
+    { label: "60–100 cm", min: 60, max: 100 },
+    { label: "60–110 cm", min: 60, max: 110 },
+    { label: "70–120 cm", min: 70, max: 120 },
   ],
   cycle: [
-    { label: "0–8 weeks", min: 0, max: 8 },
-    { label: "8–10 weeks", min: 8, max: 10 },
+    { label: "9–10 weeks", min: 9, max: 10 },
+    { label: "9–11 weeks", min: 9, max: 11 },
     { label: "10–12 weeks", min: 10, max: 12 },
-    { label: "12+ weeks", min: 12 },
   ],
   indica: [
-    { label: "0–40%", min: 0, max: 40 },
-    { label: "40–60%", min: 40, max: 60 },
-    { label: "60–100%", min: 60, max: 100 },
+    { label: "45–65%", min: 45, max: 65 },
   ],
   sativa: [
-    { label: "0–40%", min: 0, max: 40 },
-    { label: "40–60%", min: 40, max: 60 },
-    { label: "60–100%", min: 60, max: 100 },
+    { label: "35–55%", min: 35, max: 55 },
   ],
 };
 
@@ -587,12 +580,12 @@ export default function SeedsPage() {
                 setFilterValues((prev) => ({
                   ...prev,
                   [indicaFilter.slug]: {
-                    min: String(ratio.indica),
-                    max: String(ratio.indica),
+                    min: String(ratio.indicaMin),
+                    max: String(ratio.indicaMax),
                   },
                   [sativaFilter.slug]: {
-                    min: String(ratio.sativa),
-                    max: String(ratio.sativa),
+                    min: String(ratio.sativaMin),
+                    max: String(ratio.sativaMax),
                   },
                 }));
                 setOpenFilter(null);

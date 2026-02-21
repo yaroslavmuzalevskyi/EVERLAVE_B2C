@@ -11,6 +11,8 @@ type AddToCartButtonProps = {
   label?: string;
   variant?: "header" | "contact" | "primary" | "category";
   className?: string;
+  onClick?: () => void;
+  onSuccess?: () => void;
 };
 
 export default function AddToCartButton({
@@ -19,6 +21,8 @@ export default function AddToCartButton({
   label = "Add to Cart +",
   variant = "category",
   className,
+  onClick,
+  onSuccess,
 }: AddToCartButtonProps) {
   const { isInitializing } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -26,6 +30,7 @@ export default function AddToCartButton({
   const [failed, setFailed] = useState(false);
 
   const handleClick = async () => {
+    onClick?.();
     if (isInitializing) return;
     if (!productId) return;
 
@@ -33,9 +38,13 @@ export default function AddToCartButton({
       setLoading(true);
       setFailed(false);
       await addCartItem(productId, qty);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("cart-item-added"));
+      }
+      onSuccess?.();
       setJustAdded(true);
       setTimeout(() => setJustAdded(false), 1500);
-    } catch (error) {
+    } catch {
       setJustAdded(false);
 
       setFailed(true);

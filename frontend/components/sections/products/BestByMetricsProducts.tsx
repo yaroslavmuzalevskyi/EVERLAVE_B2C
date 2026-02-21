@@ -4,8 +4,10 @@ import ProductCard from "@/components/ui/ProductCard";
 import {
   fetchAllProducts,
   formatPrice,
+  getProductPurchaseOptions,
   getPrimaryImageUrl,
   type ProductListItem,
+  type ProductPurchaseOption,
 } from "@/services/products";
 import {
   buildProductHoverInfo,
@@ -22,6 +24,7 @@ type ProductCardItem = {
   price: string;
   imageUrl?: string;
   hoverInfo: ProductHoverInfoRow[];
+  purchaseOptions: ProductPurchaseOption[];
 };
 
 type MetricRankMode = "max" | "min";
@@ -94,7 +97,7 @@ const METRICS: MetricDefinition[] = [
   },
   {
     key: "yield",
-    badgeLabel: "Best Yield",
+    badgeLabel: "Highest Yield",
     rankMode: "max",
     getScore: (item) => {
       const values = [
@@ -126,7 +129,7 @@ const METRICS: MetricDefinition[] = [
   },
   {
     key: "height",
-    badgeLabel: "Best Height",
+    badgeLabel: "Highest Height",
     rankMode: "max",
     getScore: (item) => {
       const values = [
@@ -201,6 +204,7 @@ export default async function BestByMetricsProducts() {
         price: formatPrice(pick.item.priceCents, pick.item.currency),
         imageUrl: getPrimaryImageUrl(pick.item.images),
         hoverInfo: buildProductHoverInfo(pick.item),
+        purchaseOptions: getProductPurchaseOptions(pick.item),
       });
 
       return acc;
@@ -239,6 +243,7 @@ export default async function BestByMetricsProducts() {
               imageUrl={product.imageUrl}
               hoverInfo={product.hoverInfo}
               productId={product.productId}
+              purchaseOptions={product.purchaseOptions}
               href={`/products/${product.slug}`}
               badgeLabel={product.badgeLabel}
               badgeClassName="bg-pr_y text-pr_dg"

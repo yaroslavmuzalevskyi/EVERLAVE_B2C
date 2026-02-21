@@ -4,8 +4,10 @@ import ProductCard from "@/components/ui/ProductCard";
 import {
   fetchAllProducts,
   formatPrice,
+  getProductPurchaseOptions,
   getPrimaryImageUrl,
   type ProductListItem,
+  type ProductPurchaseOption,
 } from "@/services/products";
 
 type ProductCardItem = {
@@ -15,6 +17,7 @@ type ProductCardItem = {
   description: string;
   price: string;
   imageUrl?: string;
+  purchaseOptions: ProductPurchaseOption[];
 };
 
 function parseMaxNumber(value?: string) {
@@ -90,6 +93,7 @@ export default async function BestYieldProducts() {
       description: item.content?.description ?? "Premium product",
       price: formatPrice(item.priceCents, item.currency),
       imageUrl: getPrimaryImageUrl(item.images),
+      purchaseOptions: getProductPurchaseOptions(item),
     }));
   } catch {
     products = [];
@@ -122,6 +126,7 @@ export default async function BestYieldProducts() {
               isNew
               imageUrl={product.imageUrl}
               productId={product.productId}
+              purchaseOptions={product.purchaseOptions}
               href={product.slug ? `/products/${product.slug}` : undefined}
               badgeLabel="Best Yield"
               badgeClassName="bg-pr_y text-pr_dg"

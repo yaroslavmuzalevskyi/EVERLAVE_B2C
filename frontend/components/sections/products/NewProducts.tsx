@@ -4,7 +4,9 @@ import ProductCard from "@/components/ui/ProductCard";
 import {
   fetchAllProducts,
   formatPrice,
+  getProductPurchaseOptions,
   getPrimaryImageUrl,
+  type ProductPurchaseOption,
 } from "@/services/products";
 import {
   buildProductHoverInfo,
@@ -19,6 +21,7 @@ type ProductCardItem = {
   price: string;
   imageUrl?: string;
   hoverInfo: ProductHoverInfoRow[];
+  purchaseOptions: ProductPurchaseOption[];
 };
 
 export default async function NewProducts() {
@@ -29,26 +32,27 @@ export default async function NewProducts() {
       next: { revalidate: 60 },
     });
 
-      products = items
-        .filter((item): item is typeof item & { slug: string } =>
-          Boolean(item.slug),
-        )
-        .slice()
-        .sort((a, b) => {
-          const aDate = a.createdAt ? Date.parse(a.createdAt) : 0;
-          const bDate = b.createdAt ? Date.parse(b.createdAt) : 0;
-          return bDate - aDate;
-        })
-        .slice(0, 4)
-        .map((item) => ({
-          productId: item.slug,
-          slug: item.slug,
-          title: item.name,
-          description: item.content?.description ?? "Premium product",
-          price: formatPrice(item.priceCents, item.currency),
-          imageUrl: getPrimaryImageUrl(item.images),
-          hoverInfo: buildProductHoverInfo(item),
-        }));
+    products = items
+      .filter((item): item is typeof item & { slug: string } =>
+        Boolean(item.slug),
+      )
+      .slice()
+      .sort((a, b) => {
+        const aDate = a.createdAt ? Date.parse(a.createdAt) : 0;
+        const bDate = b.createdAt ? Date.parse(b.createdAt) : 0;
+        return bDate - aDate;
+      })
+      .slice(0, 4)
+      .map((item) => ({
+        productId: item.slug,
+        slug: item.slug,
+        title: item.name,
+        description: item.content?.description ?? "Premium product",
+        price: formatPrice(item.priceCents, item.currency),
+        imageUrl: getPrimaryImageUrl(item.images),
+        hoverInfo: buildProductHoverInfo(item),
+        purchaseOptions: getProductPurchaseOptions(item),
+      }));
   } catch {
     products = [];
   }
@@ -81,6 +85,7 @@ export default async function NewProducts() {
               imageUrl={product.imageUrl}
               hoverInfo={product.hoverInfo}
               productId={product.productId}
+              purchaseOptions={product.purchaseOptions}
               href={product.slug ? `/products/${product.slug}` : undefined}
               badgeLabel="New"
               badgeClassName="bg-pr_dg text-pr_w"

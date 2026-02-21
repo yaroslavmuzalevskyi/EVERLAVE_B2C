@@ -1,7 +1,11 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import AddToCartButton from "@/components/cart/AddToCartButton";
+import ProductCardPurchase from "@/components/cart/ProductCardPurchase";
 import { cn } from "@/lib/utils";
 import { type ProductHoverInfoRow } from "@/lib/productHoverInfo";
+import type { ProductPurchaseOption } from "@/services/products";
 
 type NewProductCardProps = {
   title: string;
@@ -15,6 +19,7 @@ type NewProductCardProps = {
   showButton?: boolean;
   imageUrl?: string;
   productId?: string;
+  purchaseOptions?: ProductPurchaseOption[];
 };
 
 export default function ProductCard({
@@ -29,11 +34,23 @@ export default function ProductCard({
   showButton = true,
   imageUrl,
   productId,
+  purchaseOptions,
 }: NewProductCardProps) {
   const resolvedHref =
     href ?? (productId ? `/products/${productId}` : undefined);
 
   const hasHoverInfo = Boolean(hoverInfo?.length);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(hover: none), (pointer: coarse)");
+    const syncTouchMode = () => setIsTouchDevice(mediaQuery.matches);
+    syncTouchMode();
+
+    mediaQuery.addEventListener("change", syncTouchMode);
+    return () => mediaQuery.removeEventListener("change", syncTouchMode);
+  }, []);
 
   const content = (
     <>
@@ -54,7 +71,9 @@ export default function ProductCard({
             <div
               className={cn(
                 "h-[400px] w-full transform-gpu transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
-                hasHoverInfo && "scale-100 group-hover:scale-105",
+                hasHoverInfo && "scale-100",
+                hasHoverInfo && !isTouchDevice && "group-hover:scale-105",
+                hasHoverInfo && isPreviewOpen && "scale-105",
               )}
             >
               <img
@@ -62,7 +81,9 @@ export default function ProductCard({
                 alt={title}
                 className={cn(
                   "h-full w-full rounded-2xl object-cover transition-[filter] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[filter]",
-                  hasHoverInfo && "blur-0 group-hover:blur-[2px]",
+                  hasHoverInfo && "blur-0",
+                  hasHoverInfo && !isTouchDevice && "group-hover:blur-[2px]",
+                  hasHoverInfo && isPreviewOpen && "blur-[2px]",
                 )}
               />
             </div>
@@ -72,7 +93,13 @@ export default function ProductCard({
 
           {hasHoverInfo ? (
             <div className="pointer-events-none absolute inset-0">
-              <div className="absolute inset-0 rounded-2xl bg-pr_dg/20 opacity-0 transition-opacity duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100" />
+              <div
+                className={cn(
+                  "absolute inset-0 rounded-2xl bg-pr_dg/20 opacity-0 transition-opacity duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                  !isTouchDevice && "group-hover:opacity-100",
+                  isPreviewOpen && "opacity-100",
+                )}
+              />
 
               {/* Animate wrapper only */}
               <div
@@ -80,7 +107,9 @@ export default function ProductCard({
                   "absolute inset-x-3 bottom-3 origin-bottom transform-gpu",
                   "opacity-0 translate-y-3 scale-[0.985]",
                   "transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                  "group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100",
+                  !isTouchDevice &&
+                    "group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100",
+                  isPreviewOpen && "opacity-100 translate-y-0 scale-100",
                   "will-change-transform",
                 )}
               >
@@ -115,7 +144,17 @@ export default function ProductCard({
   return (
     <div className="group flex h-full flex-col">
       {resolvedHref ? (
-        <Link href={resolvedHref} className="flex flex-1 flex-col">
+        <Link
+          href={resolvedHref}
+          className="flex flex-1 flex-col"
+          onClick={(event) => {
+            if (!hasHoverInfo || !isTouchDevice) return;
+            if (!isPreviewOpen) {
+              event.preventDefault();
+              setIsPreviewOpen(true);
+            }
+          }}
+        >
           {content}
         </Link>
       ) : (
@@ -123,10 +162,10 @@ export default function ProductCard({
       )}
 
       {showButton && (
-        <AddToCartButton
+        <ProductCardPurchase
           productId={productId}
-          className="mt-3 w-full hover:translate-y-0 active:translate-y-0"
-          variant="category"
+          fallbackPrice={price}
+          options={purchaseOptions}
         />
       )}
     </div>

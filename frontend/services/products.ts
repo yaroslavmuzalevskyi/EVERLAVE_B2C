@@ -101,6 +101,41 @@ export function formatPrice(priceCents: number, currency = "EUR") {
   }).format(priceCents / 100);
 }
 
+export type ProductPurchaseOption = {
+  label: string;
+  qty: number;
+  priceCents: number;
+  price: string;
+};
+
+function parseQtyFromVariantLabel(label: string) {
+  const match = label.trim().match(/(\d+)/);
+  if (!match) return 1;
+  const qty = Number(match[1]);
+  if (!Number.isFinite(qty) || qty < 1) return 1;
+  return Math.trunc(qty);
+}
+
+export function getProductPurchaseOptions(
+  item: Pick<ProductListItem, "content" | "currency">,
+) {
+  const rawVariants = item.content?.variants;
+  if (!rawVariants || rawVariants.length === 0) return [];
+
+  return rawVariants
+    .filter(
+      (variant): variant is { label: string; priceCents: number } =>
+        Boolean(variant.label) && typeof variant.priceCents === "number",
+    )
+    .map((variant) => ({
+      label: variant.label,
+      qty: parseQtyFromVariantLabel(variant.label),
+      priceCents: Math.max(0, Math.trunc(variant.priceCents)),
+      price: formatPrice(variant.priceCents, item.currency),
+    }))
+    .sort((a, b) => a.qty - b.qty);
+}
+
 type FetchInit = RequestInit & {
   next?: { revalidate?: number };
 };

@@ -4,7 +4,9 @@ import ProductCard from "@/components/ui/ProductCard";
 import {
   fetchAllProducts,
   formatPrice,
+  getProductPurchaseOptions,
   getPrimaryImageUrl,
+  type ProductPurchaseOption,
 } from "@/services/products";
 import {
   buildProductHoverInfo,
@@ -19,6 +21,7 @@ type ProductCardItem = {
   price: string;
   imageUrl?: string;
   hoverInfo: ProductHoverInfoRow[];
+  purchaseOptions: ProductPurchaseOption[];
 };
 
 export default async function PopularProducts() {
@@ -51,6 +54,7 @@ export default async function PopularProducts() {
         price: formatPrice(item.priceCents, item.currency),
         imageUrl: getPrimaryImageUrl(item.images),
         hoverInfo: buildProductHoverInfo(item),
+        purchaseOptions: getProductPurchaseOptions(item),
       }));
   } catch {
     products = [];
@@ -84,6 +88,7 @@ export default async function PopularProducts() {
               imageUrl={product.imageUrl}
               hoverInfo={product.hoverInfo}
               productId={product.productId}
+              purchaseOptions={product.purchaseOptions}
               href={product.slug ? `/products/${product.slug}` : undefined}
               badgeLabel="Popular"
               badgeClassName="bg-pr_dg text-pr_w"

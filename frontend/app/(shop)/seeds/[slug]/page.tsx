@@ -43,6 +43,37 @@ function findFilterValue(
   return match?.[1];
 }
 
+function ensureUnit(value: string, unit: string) {
+  const normalized = value.trim();
+  if (!normalized) return normalized;
+  if (normalized.toLowerCase().includes(unit.toLowerCase())) return normalized;
+  return `${normalized}${unit}`;
+}
+
+function extractGeneticsText(product: ProductDetails, description: string) {
+  const fromFilters = findFilterValue(product.filters, [
+    "genetic",
+    "genetics",
+    "lineage",
+    "parent",
+    "parents",
+    "cross",
+  ]);
+  if (fromFilters?.trim()) return fromFilters.trim();
+
+  const fromSections = product.content?.sections?.find((section) =>
+    (section.title ?? "").toLowerCase().includes("genetic"),
+  )?.text;
+  if (fromSections?.trim()) return fromSections.trim();
+
+  const fromDescription = description.match(/genetics?\s*:\s*([^\n.]+)/i)?.[1];
+  if (fromDescription?.trim()) return fromDescription.trim();
+
+  return undefined;
+}
+
+const FIXED_VARIANT_QTYS = [1, 5, 10, 15, 20];
+
 type SeedDetailProps = {
   params: { slug: string } | Promise<{ slug: string }>;
 };
@@ -125,10 +156,6 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
   const priceCents = product.priceCents ?? 0;
   const currency = product.currency ?? "EUR";
 
-  const priceDisplay = priceCents
-    ? formatPrice(priceCents, currency)
-    : formatPrice(0, currency);
-
   const variants =
     product.content?.variants?.filter(
       (
@@ -136,13 +163,26 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
       ): variant is { label: string; priceCents?: number } =>
         typeof variant.label === "string" && variant.label.trim().length > 0,
     ) ?? [];
-  const variantPrices =
-    variants.length > 0
-      ? variants.map((variant) => ({
-          label: variant.label,
-          price: formatPrice(variant.priceCents ?? 0, currency),
-        }))
-      : [{ label: "1x", price: priceDisplay }];
+  const baseVariant = variants
+    .map((variant) => {
+      const qtyMatch = variant.label.trim().match(/(\d+)/);
+      const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
+      const priceCents = variant.priceCents ?? 0;
+      if (!Number.isFinite(qty) || qty < 1 || priceCents <= 0) return null;
+      return { qty, priceCents };
+    })
+    .filter((entry): entry is { qty: number; priceCents: number } => Boolean(entry))
+    .sort((a, b) => a.qty - b.qty)[0];
+
+  const baseUnitPriceCents =
+    baseVariant && baseVariant.qty > 0
+      ? Math.round(baseVariant.priceCents / baseVariant.qty)
+      : Math.max(0, Math.round(priceCents));
+
+  const variantPrices = FIXED_VARIANT_QTYS.map((qty) => ({
+    label: `${qty}x`,
+    price: formatPrice(baseUnitPriceCents * qty, currency),
+  }));
 
   const effects =
     product.content?.effects ??
@@ -168,16 +208,30 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
     infoRows.push({ label: "Flavor & Aroma", value: facts.flavorAroma });
   }
   if (facts?.thcLevel) {
-    infoRows.push({ label: "THC Level", value: facts.thcLevel });
+    infoRows.push({
+      label: "THC Level",
+      value: ensureUnit(facts.thcLevel, "%"),
+    });
   }
   if (facts?.seedType) {
     infoRows.push({ label: "Seed Type", value: facts.seedType });
   }
+  if (facts?.floweringCycle) {
+    infoRows.push({
+      label: "Seed to Harvest",
+      value: ensureUnit(facts.floweringCycle, " weeks"),
+    });
+  }
   if (filterHeight) {
-    infoRows.push({ label: "Height", value: filterHeight });
+    infoRows.push({ label: "Height", value: ensureUnit(filterHeight, " cm") });
   }
   if (facts?.yield) {
-    infoRows.push({ label: "Yield", value: facts.yield });
+    infoRows.push({ label: "Yield", value: ensureUnit(facts.yield, " g/m²") });
+  }
+
+  const geneticsText = extractGeneticsText(product, description);
+  if (geneticsText) {
+    infoRows.push({ label: "Genetics", value: geneticsText });
   }
 
   if (!facts && product.content?.keyFacts?.length) {
