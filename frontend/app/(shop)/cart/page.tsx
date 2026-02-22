@@ -108,6 +108,30 @@ export default function CartPage() {
   const getItemProductSlug = (item: NonNullable<CartState>["items"][number]) =>
     item.product.slug?.trim() || "";
 
+  const getPackPresentation = (item: NonNullable<CartState>["items"][number]) => {
+    const packQty =
+      typeof item.packQty === "number" && Number.isFinite(item.packQty)
+        ? Math.max(1, Math.trunc(item.packQty))
+        : null;
+
+    if (!packQty) return null;
+
+    const isExact = item.qty % packQty === 0;
+    if (!isExact) {
+      return {
+        packQty,
+        packCount: null,
+        stepQty: 1,
+      };
+    }
+
+    return {
+      packQty,
+      packCount: Math.max(1, Math.trunc(item.qty / packQty)),
+      stepQty: packQty,
+    };
+  };
+
   const handleCheckout = async () => {
     setCheckoutError("");
 
@@ -187,6 +211,16 @@ export default function CartPage() {
                 {cart.items.map((item) => {
                   const productSlug = getItemProductSlug(item);
                   if (!productSlug) return null;
+                  const packPresentation = getPackPresentation(item);
+                  const qtyStep = packPresentation?.stepQty ?? 1;
+                  const displayQty = packPresentation?.packCount ?? item.qty;
+                  const qtyLabel = packPresentation?.packCount
+                    ? displayQty === 1
+                      ? "pack"
+                      : "packs"
+                    : displayQty === 1
+                      ? "seed"
+                      : "seeds";
 
                   return (
                     <div
@@ -208,6 +242,28 @@ export default function CartPage() {
                             <p className="text-sm font-semibold">
                               {item.product.name}
                             </p>
+                            {packPresentation?.packCount ? (
+                              <p className="mt-1 text-xs text-pr_dg/60">
+                                {packPresentation.packCount}{" "}
+                                {packPresentation.packCount === 1
+                                  ? "pack"
+                                  : "packs"}{" "}
+                                ({packPresentation.packQty}{" "}
+                                {packPresentation.packQty === 1
+                                  ? "seed"
+                                  : "seeds"}{" "}
+                                per pack)
+                              </p>
+                            ) : packPresentation?.packQty ? (
+                              <p className="mt-1 text-xs text-pr_dg/60">
+                                {item.qty} seeds total (selected pack size:{" "}
+                                {packPresentation.packQty} seeds)
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-xs text-pr_dg/60">
+                                {item.qty} {item.qty === 1 ? "seed" : "seeds"} total
+                              </p>
+                            )}
                             <p className="mt-1 text-xs text-pr_dg/60">
                               {formatPrice(
                                 item.product.priceCents,
@@ -222,18 +278,27 @@ export default function CartPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                handleQtyChange(productSlug, item.qty - 1)
+                                handleQtyChange(productSlug, item.qty - qtyStep)
                               }
                               disabled={updatingProductSlug === productSlug}
                               className="h-8 w-8 rounded-full text-sm"
                             >
                               -
                             </button>
-                            <span className="px-3 text-sm">{item.qty}</span>
+                            <span className="min-w-[72px] px-3 text-center">
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className="text-sm font-medium">
+                                  {displayQty}
+                                </span>
+                                <span className="text-[10px] uppercase tracking-wide text-pr_dg/50">
+                                  {qtyLabel}
+                                </span>
+                              </span>
+                            </span>
                             <button
                               type="button"
                               onClick={() =>
-                                handleQtyChange(productSlug, item.qty + 1)
+                                handleQtyChange(productSlug, item.qty + qtyStep)
                               }
                               disabled={updatingProductSlug === productSlug}
                               className="h-8 w-8 rounded-full text-sm"

@@ -54,7 +54,7 @@ export default function Hero({
         <Button
           variant="category"
           onClick={handleCatalogClick}
-          className="px-7 py-3 text-base font-semibold max-[640px]:px-8 max-[640px]:py-3.5 max-[640px]:text-lg"
+          className="px-7 py-3 text-base font-semibold max-[640px]:px-6 max-[640px]:py-2.5 max-[640px]:text-base"
         >
           Explore Now!
         </Button>

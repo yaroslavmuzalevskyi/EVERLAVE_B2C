@@ -10,29 +10,24 @@ const footerColumns = [
   {
     title: "B2C",
     links: [
-      { label: "Privacy", href: "/privacy-policy" },
-      { label: "Support", href: "#" },
-      { label: "Help", href: "#" },
-      { label: "My Info", href: "#" },
+      { label: "Home", href: "/" },
+      { label: "Seeds", href: "/products" },
+      { label: "My Info", href: "/user_profile/profile" },
     ],
   },
   {
     title: "B2B",
     links: [
-      { label: "About Us", href: "#" },
-      { label: "Welcome", href: "#" },
-      { label: "Our Supplier", href: "#" },
-      { label: "Contact Us", href: "#" },
+      { label: "Hero", href: "https://everlave-b2b.netlify.app/" },
+      { label: "About Us", href: "https://everlave-b2b.netlify.app/" },
+      { label: "Why We", href: "https://everlave-b2b.netlify.app/" },
+      { label: "Our Suppliers", href: "https://everlave-b2b.netlify.app/" },
+      { label: "Contact Us", href: "https://everlave-b2b.netlify.app/" },
     ],
   },
   {
     title: "Legal",
-    links: [
-      { label: "Partners", href: "#" },
-      { label: "About Us", href: "#" },
-      { label: "Customers", href: "#" },
-      { label: "Contact Us", href: "#" },
-    ],
+    links: [{ label: "Privacy", href: "/privacy-policy" }],
   },
 ];
 

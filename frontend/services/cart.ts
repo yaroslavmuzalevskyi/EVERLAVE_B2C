@@ -16,6 +16,7 @@ export type CartItem = {
   product: CartProduct;
   qty: number;
   lineTotal: number;
+  packQty?: number;
 };
 
 export type CartResponse = {
@@ -34,6 +35,7 @@ type GuestCartLine = {
 type AnyRecord = Record<string, unknown>;
 
 const GUEST_CART_STORAGE_KEY = "evervale_guest_cart_v1";
+const CART_PACK_QTY_BY_SLUG_KEY = "evervale_cart_pack_qty_by_slug_v1";
 let guestCartSyncPromise: Promise<void> | null = null;
 
 function buildApiError(
@@ -204,6 +206,89 @@ function clearGuestCart() {
   window.localStorage.removeItem(GUEST_CART_STORAGE_KEY);
 }
 
+function readCartPackQtyPreferences() {
+  if (typeof window === "undefined") return {} as Record<string, number>;
+  try {
+    const raw = window.localStorage.getItem(CART_PACK_QTY_BY_SLUG_KEY);
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+
+    return Object.entries(parsed as Record<string, unknown>).reduce<
+      Record<string, number>
+    >((acc, [slug, value]) => {
+      const normalizedSlug = typeof slug === "string" ? slug.trim() : "";
+      const qty =
+        typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+      if (
+        normalizedSlug &&
+        Number.isFinite(qty) &&
+        Math.trunc(qty) >= 1
+      ) {
+        acc[normalizedSlug] = Math.trunc(qty);
+      }
+      return acc;
+    }, {});
+  } catch {
+    return {};
+  }
+}
+
+function writeCartPackQtyPreferences(next: Record<string, number>) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(CART_PACK_QTY_BY_SLUG_KEY, JSON.stringify(next));
+}
+
+function setCartPackQtyPreference(productSlug: string, packQty: number) {
+  if (typeof window === "undefined") return;
+  const normalizedSlug = ensureProductSlug(productSlug);
+  const normalizedPackQty = normalizeQty(packQty);
+  if (!normalizedSlug || normalizedPackQty < 1) return;
+
+  const prefs = readCartPackQtyPreferences();
+  prefs[normalizedSlug] = normalizedPackQty;
+  writeCartPackQtyPreferences(prefs);
+}
+
+function removeCartPackQtyPreference(productSlug: string) {
+  if (typeof window === "undefined") return;
+  const normalizedSlug = ensureProductSlug(productSlug);
+  if (!normalizedSlug) return;
+
+  const prefs = readCartPackQtyPreferences();
+  if (!(normalizedSlug in prefs)) return;
+  delete prefs[normalizedSlug];
+  writeCartPackQtyPreferences(prefs);
+}
+
+function clearCartPackQtyPreferences() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(CART_PACK_QTY_BY_SLUG_KEY);
+}
+
+function attachPackQtyPreferences(cart: CartResponse): CartResponse {
+  const prefs = readCartPackQtyPreferences();
+  if (Object.keys(prefs).length === 0) return cart;
+
+  return {
+    ...cart,
+    items: cart.items.map((item) => {
+      const preferredPackQty = prefs[item.product.slug];
+      if (!preferredPackQty || preferredPackQty < 1) {
+        return item;
+      }
+
+      return {
+        ...item,
+        packQty: preferredPackQty,
+      };
+    }),
+  };
+}
+
 function addGuestCartItem(productSlug: string, qty: number) {
   const lines = readGuestCart();
   const index = lines.findIndex((line) => line.slug === productSlug);
@@ -340,7 +425,7 @@ export async function fetchCart() {
   const response = await apiFetch("/cart");
   if (!response.ok) {
     if (!hasAccessToken()) {
-      return buildGuestCartFromStorage();
+      return attachPackQtyPreferences(await buildGuestCartFromStorage());
     }
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to load cart", response.status, error);
@@ -349,9 +434,9 @@ export async function fetchCart() {
   const normalized = normalizeCart(await response.json().catch(() => ({})));
   if (!hasAccessToken() && normalized.items.length === 0) {
     const guestCart = await buildGuestCartFromStorage();
-    if (guestCart.items.length > 0) return guestCart;
+    if (guestCart.items.length > 0) return attachPackQtyPreferences(guestCart);
   }
-  return normalized;
+  return attachPackQtyPreferences(normalized);
 }
 
 export async function addCartItem(productSlug: string, qty = 1) {
@@ -370,9 +455,11 @@ export async function addCartItem(productSlug: string, qty = 1) {
 
   try {
     await postCartItem(normalizedProductSlug, normalizedQty);
+    setCartPackQtyPreference(normalizedProductSlug, normalizedQty);
     return { success: true };
   } catch (error) {
     if (isGuest) {
+      setCartPackQtyPreference(normalizedProductSlug, normalizedQty);
       return { success: true };
     }
 
@@ -381,6 +468,7 @@ export async function addCartItem(productSlug: string, qty = 1) {
     // forcing the user to retry later.
     if (!hasAccessToken()) {
       addGuestCartItem(normalizedProductSlug, normalizedQty);
+      setCartPackQtyPreference(normalizedProductSlug, normalizedQty);
       return { success: true };
     }
 
@@ -439,11 +527,13 @@ export async function removeCartItem(productSlug: string) {
 
   if (!response.ok) {
     if (isGuest) {
+      removeCartPackQtyPreference(normalizedProductSlug);
       return { success: true };
     }
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to remove item", response.status, error);
   }
+  removeCartPackQtyPreference(normalizedProductSlug);
   return response.json() as Promise<{ success: boolean }>;
 }
 
@@ -458,10 +548,12 @@ export async function clearCart() {
   });
   if (!response.ok) {
     if (isGuest) {
+      clearCartPackQtyPreferences();
       return { success: true };
     }
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to clear cart", response.status, error);
   }
+  clearCartPackQtyPreferences();
   return response.json() as Promise<{ success: boolean }>;
 }

@@ -17,6 +17,7 @@ export type ProductListItem = {
   content?: {
     description?: string;
     subtitle?: string;
+    geneticBalanceDescription?: string;
     facts?: {
       yield?: string;
       seedType?: string;
@@ -55,6 +56,7 @@ export type ProductDetails = ProductListItem & {
     keyFacts?: string[];
     sections?: Array<{ title: string; text: string }>;
     subtitle?: string;
+    geneticBalanceDescription?: string;
     facts?: {
       yield?: string;
       seedType?: string;
@@ -166,6 +168,11 @@ type RawProduct = {
     keyFacts?: string[];
     sections?: Array<{ title?: string; text?: string }>;
     subtitle?: string;
+    gen_balance_description?: string;
+    gen_balance_desc?: string;
+    gen_balance_desk?: string;
+    geneticBalanceDescription?: string;
+    geneticBalanceDesc?: string;
     facts?: {
       yield?: string;
       seedType?: string;
@@ -330,12 +337,20 @@ function normalizeCategory(raw: RawProduct): ProductCategory | undefined {
 }
 
 function normalizeContent(raw: RawProduct) {
-  const description =
+  const description = (
     raw.content?.description ||
     raw.description ||
     raw.shortDescription ||
-    raw.summary;
-  const subtitle = raw.content?.subtitle;
+    raw.summary
+  )?.trim();
+  const subtitle = raw.content?.subtitle?.trim() || undefined;
+  const geneticBalanceDescription =
+    raw.content?.gen_balance_description?.trim() ||
+    raw.content?.gen_balance_desc?.trim() ||
+    raw.content?.gen_balance_desk?.trim() ||
+    raw.content?.geneticBalanceDescription?.trim() ||
+    raw.content?.geneticBalanceDesc?.trim() ||
+    undefined;
   const keyFacts = raw.content?.keyFacts;
   const sections = raw.content?.sections
     ?.filter((section) => section.title || section.text)
@@ -343,6 +358,7 @@ function normalizeContent(raw: RawProduct) {
       title: section.title ?? "Details",
       text: section.text ?? "",
     }));
+  const normalizedSections = sections && sections.length > 0 ? sections : undefined;
   const facts = raw.content?.facts;
   const effects = raw.content?.effects;
   const variants = raw.content?.variants?.filter((variant) => variant.label);
@@ -351,7 +367,8 @@ function normalizeContent(raw: RawProduct) {
   if (
     !description &&
     !keyFacts &&
-    !sections &&
+    !normalizedSections &&
+    !geneticBalanceDescription &&
     !facts &&
     !effects &&
     !variants &&
@@ -362,8 +379,9 @@ function normalizeContent(raw: RawProduct) {
   return {
     description,
     keyFacts,
-    sections,
+    sections: normalizedSections,
     subtitle,
+    geneticBalanceDescription,
     facts,
     effects,
     variants: variants?.map((variant) => ({
@@ -573,6 +591,47 @@ export async function fetchProductById(slug: string, init?: FetchInit) {
   const rawProduct =
     (data as { data?: RawProduct }).data ?? (data as RawProduct);
   return normalizeProduct(rawProduct);
+}
+
+function asUnknownRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function getTrimmedString(
+  source: Record<string, unknown> | null,
+  key: string,
+): string | undefined {
+  const value = source?.[key];
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
+
+export async function fetchProductGeneticBalanceDescription(
+  slug: string,
+  init?: FetchInit,
+) {
+  const response = await fetch(`${getBaseUrl()}/products/${slug}`, {
+    ...init,
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to load product");
+  }
+
+  const payload = (await response.json().catch(() => ({}))) as unknown;
+  const root = asUnknownRecord(payload);
+  const rawProduct = asUnknownRecord(root?.data) ?? root;
+  const rawContent = asUnknownRecord(rawProduct?.content);
+
+  return (
+    getTrimmedString(rawContent, "gen_balance_description") ||
+    getTrimmedString(rawContent, "gen_balance_desc") ||
+    getTrimmedString(rawContent, "gen_balance_desk") ||
+    getTrimmedString(rawContent, "geneticBalanceDescription") ||
+    getTrimmedString(rawContent, "geneticBalanceDesc")
+  );
 }
 
 export function getPrimaryImageUrl(images?: ProductImage[]) {

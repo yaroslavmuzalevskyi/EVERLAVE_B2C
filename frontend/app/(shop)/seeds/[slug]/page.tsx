@@ -5,6 +5,7 @@ import ReviewSummaryInline from "@/components/seeds/ReviewSummaryInline";
 import SeedVariantPurchase from "@/components/seeds/SeedVariantPurchase";
 import {
   fetchAllProducts,
+  fetchProductGeneticBalanceDescription,
   fetchProductById,
   formatPrice,
   type ProductDetails,
@@ -73,6 +74,7 @@ function extractGeneticsText(product: ProductDetails, description: string) {
 }
 
 const FIXED_VARIANT_QTYS = [1, 5, 10, 15, 20];
+const PRODUCT_DETAIL_REVALIDATE_SECONDS = 60;
 
 type SeedDetailProps = {
   params: { slug: string } | Promise<{ slug: string }>;
@@ -81,7 +83,7 @@ type SeedDetailProps = {
 export async function generateStaticParams() {
   try {
     const products = await fetchAllProducts(undefined, {
-      cache: "force-cache",
+      next: { revalidate: PRODUCT_DETAIL_REVALIDATE_SECONDS },
     });
 
     const slugs = products
@@ -102,13 +104,17 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
 
   let product: ProductDetails | null = null;
   try {
-    product = await fetchProductById(slug, { cache: "force-cache" });
+    product = await fetchProductById(slug, {
+      next: { revalidate: PRODUCT_DETAIL_REVALIDATE_SECONDS },
+    });
   } catch {}
 
   // Fallback to product list lookup when detail endpoint is flaky/unavailable.
   if (!product) {
     try {
-      const items = await fetchAllProducts(undefined, { cache: "force-cache" });
+      const items = await fetchAllProducts(undefined, {
+        next: { revalidate: PRODUCT_DETAIL_REVALIDATE_SECONDS },
+      });
       const fallback = items.find((item) => item.slug === slug);
       if (fallback) {
         product = {
@@ -142,10 +148,32 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
     );
   }
 
+  // Some pages can render from list-fallback data (shorter payload) when the
+  // detail endpoint flakes. Re-fetch uncached when the per-product genetic
+  // balance description is missing so we can replace the placeholder text.
+  if (!product.content?.geneticBalanceDescription?.trim()) {
+    try {
+      const geneticBalanceDescription = await fetchProductGeneticBalanceDescription(
+        slug,
+        { cache: "no-store" },
+      );
+      if (geneticBalanceDescription) {
+        product = {
+          ...product,
+          content: {
+            ...(product.content ?? {}),
+            geneticBalanceDescription,
+          },
+        };
+      }
+    } catch {}
+  }
+
   const productSlug = product.slug || slug;
   const title = product.name;
-  const subtitle = product.content?.subtitle ?? "Premium product subtitle.";
-  const description = product.content?.description ?? "Premium product description.";
+  const subtitle = product.content?.subtitle?.trim() || "Premium product subtitle.";
+  const description =
+    product.content?.description?.trim() || "Premium product description.";
   const categoryLabel = product.category?.name ?? "Cannabis Seeds";
   const rating = product.ratingAvg ?? 0;
   const sold = product.soldCount ?? 0;
@@ -188,16 +216,20 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
     product.content?.effects ??
     product.content?.keyFacts ?? ["Premium Quality"];
 
-  const sections =
+  const mappedSections =
     product.content?.sections?.map((section) => ({
       heading: section.title,
       body: splitIntoParagraphs(section.text),
-    })) ?? [
-      {
-        heading: "Description",
-        body: splitIntoParagraphs(description),
-      },
-    ];
+    })) ?? [];
+  const sections =
+    mappedSections.length > 0
+      ? mappedSections
+      : [
+          {
+            heading: "Description",
+            body: splitIntoParagraphs(description),
+          },
+        ];
 
   const infoRows: Array<{ label: string; value: string }> = [];
 
@@ -247,6 +279,7 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
 
   const geneticBalance = product.content?.geneticBalance;
   const geneticDescription =
+    product.content?.geneticBalanceDescription?.trim() ||
     "This profile shows the cultivar's genetic ratio and expected growth character.";
   const indicaValue =
     geneticBalance?.indica ??
@@ -347,7 +380,9 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
 
           <div className="rounded-2xl bg-pr_w p-6 text-pr_dg flex h-full flex-col">
             <h2 className="text-sm font-semibold">Genetic Balance</h2>
-            <p className="mt-2 text-xs text-pr_dg/70">{geneticDescription}</p>
+            <p className="mt-2 text-xs text-pr_dg/70 whitespace-pre-line">
+              {geneticDescription}
+            </p>
             <div className="mt-auto pt-4 space-y-3 text-xs">
               <div>
                 <div className="flex justify-between">

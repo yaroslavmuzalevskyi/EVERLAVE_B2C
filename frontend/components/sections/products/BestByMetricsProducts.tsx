@@ -127,21 +127,6 @@ const METRICS: MetricDefinition[] = [
       return getMetricScore(values, "min");
     },
   },
-  {
-    key: "height",
-    badgeLabel: "Highest Height",
-    rankMode: "max",
-    getScore: (item) => {
-      const values = [
-        { value: item.content?.facts?.height, mode: "max" as const },
-        ...collectFilterValues(item, ["height"]).map((value) => ({
-          value,
-          mode: "max" as const,
-        })),
-      ];
-      return getMetricScore(values, "max");
-    },
-  },
 ];
 
 function compareByMetric(
