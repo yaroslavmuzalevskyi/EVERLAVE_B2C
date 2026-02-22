@@ -39,11 +39,67 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://vale-express-backend.onrender.com";
 const DISABLE_AUTH = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
+const SESSION_TIMEOUT_AWAY_MS = 15 * 60 * 1000;
+const SESSION_LAST_SEEN_KEY = "evervale_session_last_seen_at";
+const ACCESS_TOKEN_EXPIRY_SKEW_MS = 5_000;
 
 type AuthTokenPair = {
   accessToken?: string;
   refreshToken?: string;
 };
+
+function decodeBase64Url(value: string) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const paddingLength = (4 - (normalized.length % 4)) % 4;
+  const padded = normalized + "=".repeat(paddingLength);
+  return atob(padded);
+}
+
+function getJwtExpiryMs(token: string) {
+  const payload = token.split(".")[1];
+  if (!payload) return null;
+
+  try {
+    const decoded = decodeBase64Url(payload);
+    const parsed = JSON.parse(decoded) as { exp?: unknown };
+    if (typeof parsed.exp !== "number" || !Number.isFinite(parsed.exp)) {
+      return null;
+    }
+    return Math.trunc(parsed.exp * 1000);
+  } catch {
+    return null;
+  }
+}
+
+function isLikelyExpiredAccessToken(token: string) {
+  const expiryMs = getJwtExpiryMs(token);
+  if (!expiryMs) return false;
+  return expiryMs <= Date.now() + ACCESS_TOKEN_EXPIRY_SKEW_MS;
+}
+
+function readSessionLastSeenAt() {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(SESSION_LAST_SEEN_KEY);
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function writeSessionLastSeenAt(timestamp = Date.now()) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SESSION_LAST_SEEN_KEY, String(timestamp));
+}
+
+function clearSessionLastSeenAt() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(SESSION_LAST_SEEN_KEY);
+}
+
+function hasAwaySessionTimedOut() {
+  const lastSeen = readSessionLastSeenAt();
+  if (!lastSeen) return false;
+  return Date.now() - lastSeen > SESSION_TIMEOUT_AWAY_MS;
+}
 
 function getStringToken(
   source: Record<string, unknown> | undefined,
@@ -133,10 +189,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const init = async () => {
+      if (hasAwaySessionTimedOut()) {
+        clearTokens();
+        clearSessionLastSeenAt();
+      }
+
       const storedAccess = getAccessToken();
       const storedRefresh = getRefreshToken();
+      const accessExpired = storedAccess
+        ? isLikelyExpiredAccessToken(storedAccess)
+        : false;
 
-      if (storedAccess) {
+      if (storedAccess && !accessExpired) {
         setAccessTokenState(storedAccess);
         setIsInitializing(false);
         return;
@@ -171,6 +235,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           clearTokens();
           setAccessTokenState(null);
         }
+      } else if (storedAccess && accessExpired) {
+        clearTokens();
+        setAccessTokenState(null);
       }
       setIsInitializing(false);
     };
@@ -197,6 +264,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener(AUTH_TOKENS_UPDATED_EVENT, syncAuthState);
       window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (DISABLE_AUTH || typeof window === "undefined") return;
+
+    const markSeen = () => {
+      writeSessionLastSeenAt();
+    };
+
+    const handleReturnToSite = () => {
+      if (document.visibilityState === "hidden") {
+        writeSessionLastSeenAt();
+        return;
+      }
+
+      if (hasAwaySessionTimedOut()) {
+        clearTokens();
+        clearSessionLastSeenAt();
+        setAccessTokenState(null);
+        return;
+      }
+
+      writeSessionLastSeenAt();
+    };
+
+    writeSessionLastSeenAt();
+
+    document.addEventListener("visibilitychange", handleReturnToSite);
+    window.addEventListener("focus", handleReturnToSite);
+    window.addEventListener("pagehide", markSeen);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleReturnToSite);
+      window.removeEventListener("focus", handleReturnToSite);
+      window.removeEventListener("pagehide", markSeen);
     };
   }, []);
 
@@ -301,6 +404,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } finally {
       clearTokens();
+      clearSessionLastSeenAt();
       setAccessTokenState(null);
       router.push("/signin");
     }
