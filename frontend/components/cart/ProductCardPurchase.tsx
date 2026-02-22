@@ -66,7 +66,7 @@ export default function ProductCardPurchase({
   const dropdownId = useId();
   const { isInitializing } = useAuth();
   const [purchaseOptions, setPurchaseOptions] = useState(() =>
-    ensureRequiredOptions(options ?? [], fallbackPrice),
+    options?.length ? ensureRequiredOptions(options, fallbackPrice) : [],
   );
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -140,6 +140,9 @@ export default function ProductCardPurchase({
     try {
       setLoading(true);
       await addCartItem(productId, 1);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("cart-item-added"));
+      }
       setJustAdded(true);
       setTimeout(() => setJustAdded(false), 1500);
     } catch {

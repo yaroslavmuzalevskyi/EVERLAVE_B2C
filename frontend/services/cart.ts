@@ -375,6 +375,15 @@ export async function addCartItem(productSlug: string, qty = 1) {
     if (isGuest) {
       return { success: true };
     }
+
+    // Token may have been cleared by apiFetch after a 401/failed refresh.
+    // In that case, complete the action using guest-cart storage instead of
+    // forcing the user to retry later.
+    if (!hasAccessToken()) {
+      addGuestCartItem(normalizedProductSlug, normalizedQty);
+      return { success: true };
+    }
+
     throw error;
   }
 }
