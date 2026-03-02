@@ -12,28 +12,28 @@ const reasons = [
   {
     title: "Free and fast delivery / return",
     description:
-      "We source plants only from trusted growers, carefully monitoring root health and cultivation conditions to ensure strong and healthy growth.",
+      "We provide EU-wide delivery with tracking, discreet packaging, and a simple return process for damaged or incorrect orders.",
     badgeIcon: protectionCardIcon,
     backgroundIcon: protectionIcon,
   },
   {
     title: "High yield genetics",
     description:
-      "We source plants only from trusted growers, carefully monitoring root health and cultivation conditions to ensure strong and healthy growth.",
+      "Our catalog is built on thoroughly tested high-yield F1 hybrids that help licensed producers consistently hit target g/m² performance.",
     badgeIcon: growCardIcon,
     backgroundIcon: growIcon,
   },
   {
     title: "Custom breeding",
     description:
-      "We source plants only from trusted growers, carefully monitoring root health and cultivation conditions to ensure strong and healthy growth.",
+      "For large partners, we offer custom breeding programs and phenotype selection for potency, yield, or terpene goals with full compliance.",
     badgeIcon: dnaCardIcon,
     backgroundIcon: dnaIcon,
   },
   {
     title: "4.8 average customer review",
     description:
-      "We source plants only from trusted growers, carefully monitoring root health and cultivation conditions to ensure strong and healthy growth.",
+      "Evervale focuses on stable germination, transparent data, and responsive support, resulting in an average 4.8/5 rating from repeat B2B clients.",
     badgeIcon: chainCardIcon,
     backgroundIcon: chainIcon,
   },
