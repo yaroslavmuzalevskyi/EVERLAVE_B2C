@@ -39,13 +39,15 @@ export default function Footer() {
             </div>
           </div>
 
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3 lg:gap-14">
+          <div className="grid gap-10 sm:grid-cols-2 lg:ml-auto lg:flex lg:w-auto lg:max-w-none lg:items-start lg:justify-end lg:gap-16 xl:gap-20">
             {footerColumns.map((column) => (
               <FooterColumn
                 key={column.title}
                 title={column.title}
                 links={column.links}
-                className="min-w-[140px] text-center lg:text-left"
+                className={`w-full items-center text-center lg:items-start lg:text-left ${
+                  column.title === "Legal" ? "lg:w-auto" : "lg:w-[170px]"
+                }`}
               />
             ))}
           </div>
