@@ -66,7 +66,8 @@ export default async function PopularProducts() {
         <div>
           <h2 className="text-3xl font-semibold text-pr_w">Popular Products</h2>
           <p className="mt-2 text-sm text-pr_w/70 sm:text-base">
-            Our most frequently reordered strains - proven, reliable performers.
+            Handpicked for peak THC, maximum yield, or fastest finish - our top
+            performers at a glance.
           </p>
         </div>
         <Link href="/products">

@@ -19,7 +19,7 @@ const reasons = [
   {
     title: "High yield genetics",
     description:
-      "Our catalog is built on thoroughly tested high-yield F1 hybrids that help licensed producers consistently hit target g/m² performance.",
+      "Consistent genetic output with documented characteristics and predictable catalog metrics.",
     badgeIcon: growCardIcon,
     backgroundIcon: growIcon,
   },
@@ -33,7 +33,7 @@ const reasons = [
   {
     title: "4.8 average customer review",
     description:
-      "Evervale focuses on stable germination, transparent data, and responsive support, resulting in an average 4.8/5 rating from repeat B2B clients.",
+      "Evervale focuses on transparent data and responsive support, resulting in an average 4.8/5 rating from repeat B2B clients.",
     badgeIcon: chainCardIcon,
     backgroundIcon: chainIcon,
   },

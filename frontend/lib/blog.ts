@@ -39,7 +39,7 @@ export const blogPosts: BlogPost[] = [
       {
         heading: "Why Customers Choose Premium Seed Brands",
         body: [
-          "Consistency in quality control is what separates long-term brands from short-term sellers. Customers return to suppliers who demonstrate reliability, professionalism, and accountability in every batch they release.",
+          "Consistency in quality control is what separates long-term brands from short-term sellers. Customers return to partners who demonstrate reliability, professionalism, and accountability in every batch they release.",
           "Premium brands also provide transparency, sharing lineage, seed type, and genetic background so buyers understand exactly what they are purchasing.",
         ],
       },
@@ -64,7 +64,7 @@ export const blogPosts: BlogPost[] = [
       {
         heading: "Verified Quality Standards",
         body: [
-          "Established brands maintain consistent quality standards and documented processes, reducing the risk of unstable genetics or poor germination rates.",
+          "Established brands maintain consistent quality standards and documented processes, reducing the risk of unstable genetics and inconsistent outcomes.",
         ],
       },
     ],

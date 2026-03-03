@@ -15,19 +15,54 @@ import { seedItems } from "@/lib/seeds";
 
 const FALLBACK_FLAVOR = "Sweet · Fruity · Light Earthy";
 
-function splitIntoParagraphs(text?: string) {
-  if (!text) return [];
+function normalizeEscapedText(text?: string) {
+  if (!text) return "";
   return text
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, " ")
+    .replace(/\\_/g, "_")
+    .replace(/\\\*/g, "*")
+    .replace(/\r\n/g, "\n")
+    // Some CMS entries use "_" as pseudo line separators/markdown artifacts.
+    .replace(/_/g, " ")
+    // Keep "Genetics:" on its own line for readability.
+    .replace(/\s*Genetics\s*:\s*/gi, "\nGenetics: ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function stripMarkdownArtifacts(text: string) {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/(^|[\s(])_([^_]+)_/g, "$1$2")
+    .replace(/\*\*/g, "")
+    .replace(/_/g, "")
+    .trim();
+}
+
+function splitIntoParagraphs(text?: string) {
+  const normalized = normalizeEscapedText(text);
+  if (!normalized) return [];
+  return normalized
     .split(/\n{2,}/)
     .map((part) => part.trim())
     .filter(Boolean);
 }
 
 function formatInlineText(text: string) {
-  const pieces = text.split(/(\*\*[^*]+\*\*)/g);
+  const normalized = normalizeEscapedText(text);
+  const pieces = normalized.split(/(\*\*[^*]+\*\*)/g);
   return pieces.map((piece, index) => {
     const isBold = piece.startsWith("**") && piece.endsWith("**") && piece.length > 4;
-    if (!isBold) return <span key={`${piece}-${index}`}>{piece}</span>;
+    if (!isBold) {
+      return (
+        <span key={`${piece}-${index}`}>
+          {stripMarkdownArtifacts(piece)}
+        </span>
+      );
+    }
     return <strong key={`${piece}-${index}`}>{piece.slice(2, -2)}</strong>;
   });
 }
@@ -60,15 +95,21 @@ function extractGeneticsText(product: ProductDetails, description: string) {
     "parents",
     "cross",
   ]);
-  if (fromFilters?.trim()) return fromFilters.trim();
+  if (fromFilters?.trim()) return stripMarkdownArtifacts(normalizeEscapedText(fromFilters));
 
   const fromSections = product.content?.sections?.find((section) =>
     (section.title ?? "").toLowerCase().includes("genetic"),
   )?.text;
-  if (fromSections?.trim()) return fromSections.trim();
+  if (fromSections?.trim()) {
+    return stripMarkdownArtifacts(normalizeEscapedText(fromSections));
+  }
 
-  const fromDescription = description.match(/genetics?\s*:\s*([^\n.]+)/i)?.[1];
-  if (fromDescription?.trim()) return fromDescription.trim();
+  const fromDescription = normalizeEscapedText(description).match(
+    /genetics?\s*:\s*([^\\\n.]+)/i,
+  )?.[1];
+  if (fromDescription?.trim()) {
+    return stripMarkdownArtifacts(normalizeEscapedText(fromDescription));
+  }
 
   return undefined;
 }
@@ -171,9 +212,10 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
 
   const productSlug = product.slug || slug;
   const title = product.name;
-  const subtitle = product.content?.subtitle?.trim() || "Premium product subtitle.";
+  const subtitle =
+    normalizeEscapedText(product.content?.subtitle) || "Premium product subtitle.";
   const description =
-    product.content?.description?.trim() || "Premium product description.";
+    normalizeEscapedText(product.content?.description) || "Premium product description.";
   const categoryLabel = product.category?.name ?? "Cannabis Seeds";
   const rating = product.ratingAvg ?? 0;
   const sold = product.soldCount ?? 0;
@@ -279,7 +321,7 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
 
   const geneticBalance = product.content?.geneticBalance;
   const geneticDescription =
-    product.content?.geneticBalanceDescription?.trim() ||
+    normalizeEscapedText(product.content?.geneticBalanceDescription) ||
     "This profile shows the cultivar's genetic ratio and expected growth character.";
   const indicaValue =
     geneticBalance?.indica ??
@@ -336,7 +378,9 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
                       {infoRows.map((row) => (
                         <div key={row.label} className="flex justify-between">
                           <span className="font-semibold">{row.label}</span>
-                          <span className="text-pr_dg/70">{row.value}</span>
+                          <span className="text-pr_dg/70">
+                            {stripMarkdownArtifacts(normalizeEscapedText(row.value))}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -369,7 +413,7 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
                 ).map((paragraph, index) => (
                   <p
                     key={`${section.heading}-${index}`}
-                    className="mt-2 text-xs text-pr_dg/70"
+                    className="mt-2 whitespace-pre-line text-xs text-pr_dg/70"
                   >
                     {formatInlineText(paragraph)}
                   </p>
@@ -381,7 +425,7 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
           <div className="rounded-2xl bg-pr_w p-6 text-pr_dg flex h-full flex-col">
             <h2 className="text-sm font-semibold">Genetic Balance</h2>
             <p className="mt-2 text-xs text-pr_dg/70 whitespace-pre-line">
-              {geneticDescription}
+              {stripMarkdownArtifacts(geneticDescription)}
             </p>
             <div className="mt-auto pt-4 space-y-3 text-xs">
               <div>

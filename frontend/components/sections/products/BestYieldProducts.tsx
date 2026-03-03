@@ -105,7 +105,7 @@ export default async function BestYieldProducts() {
         <div>
           <h2 className="text-3xl font-semibold text-pr_w">Best Yield</h2>
           <p className="mt-2 text-sm text-pr_w/70 sm:text-base">
-            Browse product categories for cultivation and distribution
+            Explore our latest F1 autoflower releases
           </p>
         </div>
         <Link href="/products">
