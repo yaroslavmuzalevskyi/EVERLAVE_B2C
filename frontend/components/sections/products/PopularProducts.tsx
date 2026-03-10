@@ -66,7 +66,7 @@ export default async function PopularProducts() {
         <div>
           <h2 className="text-3xl font-semibold text-pr_w">Popular Products</h2>
           <p className="mt-2 text-sm text-pr_w/70 sm:text-base">
-            Browse product categories for cultivation and distribution
+            Our most frequently reordered strains - proven, reliable performers.
           </p>
         </div>
         <Link href="/products">

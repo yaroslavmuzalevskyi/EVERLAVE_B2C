@@ -87,6 +87,31 @@ export type ProductQuery = {
   filters?: Record<string, string | number | undefined>;
 };
 
+export type ProductBestDirection = "asc" | "desc";
+
+export type ProductBestQuery = {
+  by: string;
+  top?: number;
+};
+
+export type ProductBestMetricItem = {
+  product: ProductListItem;
+  metricValue?: number;
+};
+
+export type ProductBestMetricBucket = {
+  key: string;
+  dir?: ProductBestDirection;
+  filterName?: string;
+  filterType?: string;
+  items: ProductBestMetricItem[];
+};
+
+export type ProductBestByMetricResponse = Record<
+  string,
+  ProductBestMetricBucket
+>;
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   process.env.NEXT_PUBLIC_API_URL ??
@@ -208,6 +233,7 @@ type RawProduct = {
   filters?: Record<string, string>;
   createdAt?: string;
   updatedAt?: string;
+  metricValue?: number | string;
 };
 
 function getFilterValue(
@@ -513,6 +539,105 @@ function normalizeListResponse(data: unknown): ProductListResponse {
   };
 }
 
+function normalizeBestDirection(value: unknown): ProductBestDirection | undefined {
+  if (value === "asc" || value === "desc") return value;
+  return undefined;
+}
+
+function getOptionalNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function getBestCategoriesFromPayload(root: Record<string, unknown> | null) {
+  if (!root) return [] as unknown[];
+  if (Array.isArray(root.categories)) return root.categories;
+
+  const nestedData = asUnknownRecord(root.data);
+  if (Array.isArray(nestedData?.categories)) return nestedData.categories;
+
+  if (asUnknownRecord(root.best)) return [root];
+  if (asUnknownRecord(nestedData?.best)) return [nestedData];
+
+  return [] as unknown[];
+}
+
+function normalizeBestProductsResponse(
+  payload: unknown,
+): ProductBestByMetricResponse {
+  const root = asUnknownRecord(payload);
+  const categories = getBestCategoriesFromPayload(root);
+  const bestByMetric: ProductBestByMetricResponse = {};
+  const dedupeKeysByMetric = new Map<string, Set<string>>();
+
+  categories.forEach((categoryValue) => {
+    const category = asUnknownRecord(categoryValue);
+    if (!category) return;
+
+    const categorySlug =
+      typeof category.slug === "string" ? category.slug : undefined;
+    const categoryName =
+      typeof category.name === "string" ? category.name : undefined;
+
+    const bestRecord = asUnknownRecord(category.best);
+    if (!bestRecord) return;
+
+    Object.entries(bestRecord).forEach(([metricKey, metricValue]) => {
+      const metricRecord = asUnknownRecord(metricValue);
+      if (!metricRecord) return;
+
+      if (!bestByMetric[metricKey]) {
+        bestByMetric[metricKey] = {
+          key: metricKey,
+          dir: normalizeBestDirection(metricRecord.dir),
+          filterName:
+            typeof metricRecord.filterName === "string"
+              ? metricRecord.filterName
+              : undefined,
+          filterType:
+            typeof metricRecord.filterType === "string"
+              ? metricRecord.filterType
+              : undefined,
+          items: [],
+        };
+      }
+
+      const dedupe = dedupeKeysByMetric.get(metricKey) ?? new Set<string>();
+      dedupeKeysByMetric.set(metricKey, dedupe);
+
+      const rawItems = Array.isArray(metricRecord.items) ? metricRecord.items : [];
+      rawItems.forEach((rawItem) => {
+        const rawProduct = asUnknownRecord(rawItem);
+        if (!rawProduct) return;
+
+        let product = normalizeProduct(rawProduct as RawProduct);
+        if (!product.category && (categorySlug || categoryName)) {
+          product = {
+            ...product,
+            category: {
+              slug: categorySlug,
+              name: categoryName,
+            },
+          };
+        }
+
+        const dedupeKey = product.slug || product.id;
+        if (!dedupeKey || dedupe.has(dedupeKey)) return;
+        dedupe.add(dedupeKey);
+
+        bestByMetric[metricKey].items.push({
+          product,
+          metricValue: getOptionalNumber(rawProduct.metricValue),
+        });
+      });
+    });
+  });
+
+  return bestByMetric;
+}
+
 export async function fetchProducts(
   query: ProductQuery,
   init?: FetchInit,
@@ -576,6 +701,36 @@ export async function fetchAllProducts(
   } while (items.length < total);
 
   return items;
+}
+
+export async function fetchBestProductsByMetrics(
+  query: ProductBestQuery,
+  init?: FetchInit,
+): Promise<ProductBestByMetricResponse> {
+  const params = new URLSearchParams();
+  params.set("by", query.by);
+
+  if (
+    typeof query.top === "number" &&
+    Number.isFinite(query.top) &&
+    query.top > 0
+  ) {
+    params.set("top", String(Math.trunc(query.top)));
+  }
+
+  const response = await fetch(
+    `${getBaseUrl()}/products/best?${params.toString()}`,
+    {
+      ...init,
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to load best products");
+  }
+
+  const payload = (await response.json().catch(() => ({}))) as unknown;
+  return normalizeBestProductsResponse(payload);
 }
 
 export async function fetchProductById(slug: string, init?: FetchInit) {

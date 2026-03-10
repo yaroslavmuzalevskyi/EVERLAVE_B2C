@@ -18,7 +18,7 @@ const cards: ProofCard[] = [
   },
   {
     title: "400+ KG",
-    description: "Seeds Sold Peer Month",
+    description: "Seeds Sold Per Month",
     icon: <ShoppingCart className="h-8 w-8 text-sr_dg" />,
   },
   {

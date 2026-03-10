@@ -12,28 +12,28 @@ const reasons = [
   {
     title: "Free and fast delivery / return",
     description:
-      "We source plants only from trusted growers, carefully monitoring root health and cultivation conditions to ensure strong and healthy growth.",
+      "We provide EU-wide delivery with tracking, discreet packaging, and a simple return process for damaged or incorrect orders.",
     badgeIcon: protectionCardIcon,
     backgroundIcon: protectionIcon,
   },
   {
     title: "High yield genetics",
     description:
-      "We source plants only from trusted growers, carefully monitoring root health and cultivation conditions to ensure strong and healthy growth.",
+      "Consistent genetic output with documented characteristics and predictable catalog metrics.",
     badgeIcon: growCardIcon,
     backgroundIcon: growIcon,
   },
   {
     title: "Custom breeding",
     description:
-      "We source plants only from trusted growers, carefully monitoring root health and cultivation conditions to ensure strong and healthy growth.",
+      "For large partners, we offer custom breeding programs and phenotype selection for potency, yield, or terpene goals with full compliance.",
     badgeIcon: dnaCardIcon,
     backgroundIcon: dnaIcon,
   },
   {
     title: "4.8 average customer review",
     description:
-      "We source plants only from trusted growers, carefully monitoring root health and cultivation conditions to ensure strong and healthy growth.",
+      "Evervale focuses on transparent data and responsive support, resulting in an average 4.8/5 rating from repeat B2B clients.",
     badgeIcon: chainCardIcon,
     backgroundIcon: chainIcon,
   },
@@ -57,7 +57,7 @@ export default function WhyChooseUs() {
           <article
             key={reason.title}
             data-no-reveal="true"
-            className="relative min-h-[260px] overflow-hidden rounded-tr-[32px] rounded-bl-[32px] border border-pr_w/20 bg-pr_w p-8 text-pr_dg transform-gpu transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1.5 sm:p-9"
+            className="relative min-h-[260px] overflow-hidden rounded-tr-[32px] rounded-bl-[32px] border border-pr_w/20 bg-pr_w p-8 text-pr_dg transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.25,0.9,0.35,1)] hover:-translate-y-1 sm:p-9"
           >
             <Image
               src={reason.backgroundIcon}

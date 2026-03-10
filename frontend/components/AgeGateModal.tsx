@@ -1,18 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "evervale_age_gate_v1";
 
 export default function AgeGateModal() {
-  const router = useRouter();
   const [isOpen, setIsOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const status = window.localStorage.getItem(STORAGE_KEY);
+    let status: string | null = null;
+    try {
+      status = window.localStorage.getItem(STORAGE_KEY);
+    } catch {
+      status = null;
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOpen(status !== "allowed");
   }, []);
@@ -31,14 +34,18 @@ export default function AgeGateModal() {
 
   const handleClose = () => {
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, "allowed");
+      try {
+        window.localStorage.setItem(STORAGE_KEY, "allowed");
+      } catch {}
     }
     setIsOpen(false);
   };
 
   const handleDecline = () => {
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem(STORAGE_KEY);
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch {}
       window.location.replace("https://www.google.com/search?q=kitties&udm=2");
       return;
     }

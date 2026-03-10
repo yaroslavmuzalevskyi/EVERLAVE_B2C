@@ -3,9 +3,11 @@ import Link from "next/link";
 import ProductCard from "@/components/ui/ProductCard";
 import {
   fetchAllProducts,
+  fetchBestProductsByMetrics,
   formatPrice,
   getProductPurchaseOptions,
   getPrimaryImageUrl,
+  type ProductBestMetricBucket,
   type ProductListItem,
   type ProductPurchaseOption,
 } from "@/services/products";
@@ -18,7 +20,7 @@ type ProductCardItem = {
   metricKey: string;
   badgeLabel: string;
   productId: string;
-  slug: string;
+  slug?: string;
   title: string;
   description: string;
   price: string;
@@ -33,6 +35,7 @@ type MetricDefinition = {
   key: string;
   badgeLabel: string;
   rankMode: MetricRankMode;
+  requestDirection: "asc" | "desc";
   getScore: (item: ProductListItem) => number | undefined;
 };
 
@@ -81,9 +84,31 @@ function getMetricScore(
 
 const METRICS: MetricDefinition[] = [
   {
+    key: "cycle",
+    badgeLabel: "Fastest Harvest",
+    rankMode: "min",
+    requestDirection: "asc",
+    getScore: (item) => {
+      const values = [
+        { value: item.content?.facts?.floweringCycle, mode: "min" as const },
+        ...collectFilterValues(item, [
+          "seed to harvest",
+          "harvest",
+          "flowering",
+          "cycle",
+        ]).map((value) => ({
+          value,
+          mode: "min" as const,
+        })),
+      ];
+      return getMetricScore(values, "min");
+    },
+  },
+  {
     key: "thc",
     badgeLabel: "Highest THC",
     rankMode: "max",
+    requestDirection: "desc",
     getScore: (item) => {
       const values = [
         { value: item.content?.facts?.thcLevel, mode: "max" as const },
@@ -99,6 +124,7 @@ const METRICS: MetricDefinition[] = [
     key: "yield",
     badgeLabel: "Highest Yield",
     rankMode: "max",
+    requestDirection: "desc",
     getScore: (item) => {
       const values = [
         { value: item.content?.facts?.yield, mode: "max" as const },
@@ -108,23 +134,6 @@ const METRICS: MetricDefinition[] = [
         })),
       ];
       return getMetricScore(values, "max");
-    },
-  },
-  {
-    key: "harvest",
-    badgeLabel: "Fastest Harvest",
-    rankMode: "min",
-    getScore: (item) => {
-      const values = [
-        { value: item.content?.facts?.floweringCycle, mode: "min" as const },
-        ...collectFilterValues(item, ["seed to harvest", "harvest"]).map(
-          (value) => ({
-            value,
-            mode: "min" as const,
-          }),
-        ),
-      ];
-      return getMetricScore(values, "min");
     },
   },
 ];
@@ -146,56 +155,128 @@ function compareByMetric(
   return bDate - aDate;
 }
 
+function toProductCardItem(
+  item: ProductListItem,
+  metric: Pick<MetricDefinition, "key" | "badgeLabel">,
+): ProductCardItem {
+  return {
+    metricKey: metric.key,
+    badgeLabel: metric.badgeLabel,
+    productId: item.slug || item.id,
+    slug: item.slug,
+    title: item.name,
+    description: item.content?.description ?? "Premium product",
+    price: formatPrice(item.priceCents, item.currency),
+    imageUrl: getPrimaryImageUrl(item.images),
+    hoverInfo: buildProductHoverInfo(item),
+    purchaseOptions: getProductPurchaseOptions(item),
+  };
+}
+
+function pickProductFromBestMetricBucket(
+  bucket: ProductBestMetricBucket | undefined,
+  rankMode: MetricRankMode,
+): ProductListItem | undefined {
+  if (!bucket || bucket.items.length === 0) return undefined;
+
+  const numericItems = bucket.items.filter(
+    (
+      entry,
+    ): entry is typeof entry & {
+      metricValue: number;
+    } =>
+      typeof entry.metricValue === "number" &&
+      Number.isFinite(entry.metricValue),
+  );
+
+  if (numericItems.length === 0) {
+    return bucket.items[0]?.product;
+  }
+
+  const sorted = numericItems.sort((a, b) =>
+    rankMode === "min"
+      ? a.metricValue - b.metricValue
+      : b.metricValue - a.metricValue,
+  );
+
+  return sorted[0]?.product ?? bucket.items[0]?.product;
+}
+
+function buildFallbackProductCards(
+  items: ProductListItem[],
+): ProductCardItem[] {
+  const candidates = items.filter(
+    (item): item is ProductListItem & { slug: string } => Boolean(item.slug),
+  );
+
+  return METRICS.reduce<ProductCardItem[]>((acc, metric) => {
+    const ranked = candidates
+      .map((item) => ({
+        item,
+        score: metric.getScore(item),
+      }))
+      .filter(
+        (
+          entry,
+        ): entry is {
+          item: ProductListItem & { slug: string };
+          score: number;
+        } => entry.score !== undefined,
+      )
+      .sort((a, b) =>
+        compareByMetric(a.item, b.item, a.score, b.score, metric.rankMode),
+      );
+
+    const pick = ranked[0];
+    if (!pick) return acc;
+
+    acc.push(toProductCardItem(pick.item, metric));
+    return acc;
+  }, []);
+}
+
 export default async function BestByMetricsProducts() {
   let products: ProductCardItem[] = [];
 
   try {
-    const items = await fetchAllProducts(undefined, {
-      next: { revalidate: 60 },
-    });
+    const by = METRICS.map(
+      (metric) => `${metric.key}:${metric.requestDirection}`,
+    ).join(",");
 
-    const candidates = items.filter(
-      (item): item is ProductListItem & { slug: string } => Boolean(item.slug),
+    const bestByMetric = await fetchBestProductsByMetrics(
+      {
+        by,
+        top: 1,
+      },
+      {
+        next: { revalidate: 60 },
+      },
     );
 
     products = METRICS.reduce<ProductCardItem[]>((acc, metric) => {
-      const ranked = candidates
-        .map((item) => ({
-          item,
-          score: metric.getScore(item),
-        }))
-        .filter(
-          (
-            entry,
-          ): entry is {
-            item: ProductListItem & { slug: string };
-            score: number;
-          } => entry.score !== undefined,
-        )
-        .sort((a, b) =>
-          compareByMetric(a.item, b.item, a.score, b.score, metric.rankMode),
-        );
+      const pickedProduct = pickProductFromBestMetricBucket(
+        bestByMetric[metric.key],
+        metric.rankMode,
+      );
+      if (!pickedProduct) return acc;
 
-      const pick = ranked[0];
-      if (!pick) return acc;
-
-      acc.push({
-        metricKey: metric.key,
-        badgeLabel: metric.badgeLabel,
-        productId: pick.item.slug,
-        slug: pick.item.slug,
-        title: pick.item.name,
-        description: pick.item.content?.description ?? "Premium product",
-        price: formatPrice(pick.item.priceCents, pick.item.currency),
-        imageUrl: getPrimaryImageUrl(pick.item.images),
-        hoverInfo: buildProductHoverInfo(pick.item),
-        purchaseOptions: getProductPurchaseOptions(pick.item),
-      });
-
+      acc.push(toProductCardItem(pickedProduct, metric));
       return acc;
     }, []);
   } catch {
     products = [];
+  }
+
+  if (products.length === 0) {
+    try {
+      const items = await fetchAllProducts(undefined, {
+        next: { revalidate: 60 },
+      });
+
+      products = buildFallbackProductCards(items);
+    } catch {
+      products = [];
+    }
   }
 
   return (
@@ -206,7 +287,8 @@ export default async function BestByMetricsProducts() {
             Top Picks by Performance
           </h2>
           <p className="mt-2 text-sm text-pr_w/70 sm:text-base">
-            One standout cultivar for each key performance metric
+            Handpicked for peak THC, maximum yield, or fastest finish — our top
+            performers at a glance.
           </p>
         </div>
         <Link href="/products">
@@ -220,7 +302,7 @@ export default async function BestByMetricsProducts() {
         ) : (
           products.map((product) => (
             <ProductCard
-              key={`${product.metricKey}-${product.slug}`}
+              key={`${product.metricKey}-${product.productId}`}
               title={product.title}
               description={product.description}
               price={product.price}
@@ -229,7 +311,7 @@ export default async function BestByMetricsProducts() {
               hoverInfo={product.hoverInfo}
               productId={product.productId}
               purchaseOptions={product.purchaseOptions}
-              href={`/products/${product.slug}`}
+              href={product.slug ? `/products/${product.slug}` : undefined}
               badgeLabel={product.badgeLabel}
               badgeClassName="bg-pr_y text-pr_dg"
             />

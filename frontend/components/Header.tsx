@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { usePathname } from "next/navigation";
 
-const BUSINESS_URL = "https://b2b.evervale.org";
+const BUSINESS_URL = "https://b2b.evervale.org/";
 
 const tabs: SectionTab[] = [
   { id: "home", label: "Home", href: "/" },
