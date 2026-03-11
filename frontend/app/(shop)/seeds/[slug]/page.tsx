@@ -115,7 +115,12 @@ function extractGeneticsText(product: ProductDetails, description: string) {
   return undefined;
 }
 
-const FIXED_VARIANT_QTYS = [1, 5, 10, 15, 20];
+const FIXED_VARIANT_PACKS = [
+  { paidQty: 1, bonusQty: 0, label: "1 seed" },
+  { paidQty: 3, bonusQty: 1, label: "3+1 seeds" },
+  { paidQty: 5, bonusQty: 2, label: "5+2 seeds" },
+  { paidQty: 10, bonusQty: 4, label: "10+4 seeds" },
+];
 const PRODUCT_DETAIL_REVALIDATE_SECONDS = 60;
 
 type SeedDetailProps = {
@@ -250,9 +255,9 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
       ? Math.round(baseVariant.priceCents / baseVariant.qty)
       : Math.max(0, Math.round(priceCents));
 
-  const variantPrices = FIXED_VARIANT_QTYS.map((qty) => ({
-    label: `${qty}x`,
-    price: formatPrice(baseUnitPriceCents * qty, currency),
+  const variantPrices = FIXED_VARIANT_PACKS.map((pack) => ({
+    label: pack.label,
+    price: formatPrice(baseUnitPriceCents * pack.paidQty, currency),
   }));
 
   const effects =
@@ -288,9 +293,6 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
       value: ensureUnit(facts.thcLevel, "%"),
     });
   }
-  if (facts?.seedType) {
-    infoRows.push({ label: "Seed Type", value: facts.seedType });
-  }
   if (facts?.floweringCycle) {
     infoRows.push({
       label: "Seed to Harvest",
@@ -308,6 +310,7 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
   if (geneticsText) {
     infoRows.push({ label: "Genetics", value: geneticsText });
   }
+  infoRows.push({ label: "Seed Type", value: "Feminized Autoflower" });
 
   if (!facts && product.content?.keyFacts?.length) {
     infoRows.push({

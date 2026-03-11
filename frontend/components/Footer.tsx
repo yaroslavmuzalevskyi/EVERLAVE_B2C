@@ -42,7 +42,7 @@ const footerColumns = [
 
 export default function Footer() {
   return (
-    <footer className="w-full border-t border-pr_w/30 bg-transparent">
+    <footer className="w-full border-t border-pr_w/30 bg-pr_dg">
       <div className="mx-auto flex w-full flex-col gap-10 px-6 py-12 sm:px-8 md:px-8 lg:px-12 xl:px-[130px]">
         <div className="flex w-full flex-col items-center gap-10 text-center lg:flex-row lg:items-start lg:justify-between lg:text-left">
           <div className="flex flex-col items-center gap-6 lg:items-start">

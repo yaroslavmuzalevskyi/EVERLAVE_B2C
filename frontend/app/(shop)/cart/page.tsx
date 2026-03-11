@@ -34,6 +34,13 @@ const initialAddress: AddressState = {
   phone: "",
 };
 
+const PACK_LABEL_BY_PAID_QTY: Record<number, string> = {
+  1: "1 seed",
+  3: "3+1 seeds",
+  5: "5+2 seeds",
+  10: "10+4 seeds",
+};
+
 export default function CartPage() {
   const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
   const router = useRouter();
@@ -131,6 +138,9 @@ export default function CartPage() {
       stepQty: packQty,
     };
   };
+
+  const getPackDisplayLabel = (packQty: number) =>
+    PACK_LABEL_BY_PAID_QTY[packQty] ?? `${packQty} seeds`;
 
   const handleCheckout = async () => {
     setCheckoutError("");
@@ -248,16 +258,13 @@ export default function CartPage() {
                                 {packPresentation.packCount === 1
                                   ? "pack"
                                   : "packs"}{" "}
-                                ({packPresentation.packQty}{" "}
-                                {packPresentation.packQty === 1
-                                  ? "seed"
-                                  : "seeds"}{" "}
-                                per pack)
+                                ({getPackDisplayLabel(packPresentation.packQty)} per
+                                pack)
                               </p>
                             ) : packPresentation?.packQty ? (
                               <p className="mt-1 text-xs text-pr_dg/60">
                                 {item.qty} seeds total (selected pack size:{" "}
-                                {packPresentation.packQty} seeds)
+                                {getPackDisplayLabel(packPresentation.packQty)})
                               </p>
                             ) : (
                               <p className="mt-1 text-xs text-pr_dg/60">

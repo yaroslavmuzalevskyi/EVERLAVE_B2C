@@ -12,7 +12,7 @@ type SeedVariantPurchaseProps = {
 };
 
 function parseQtyFromLabel(label: string) {
-  const match = label.trim().match(/^(\d+)\s*x$/i) ?? label.trim().match(/^(\d+)x$/i);
+  const match = label.trim().match(/^(\d+)/);
   if (!match) return 1;
   const qty = Number(match[1]);
   if (!Number.isFinite(qty) || qty < 1) return 1;
