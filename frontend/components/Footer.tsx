@@ -5,7 +5,7 @@ const footerColumns = [
   {
     title: "SHOP",
     links: [
-      { label: "Home", href: "/https://evervale.org/" },
+      { label: "Home", href: "https://evervale.org/" },
       { label: "Seeds", href: "https://evervale.org/products" },
       {
         label: "My Account",
