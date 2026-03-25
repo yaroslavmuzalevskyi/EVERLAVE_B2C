@@ -12,11 +12,23 @@ export type CartProduct = {
   images?: Array<{ id?: string; url: string }>;
 };
 
+export type CartPack = {
+  id: string;
+  name: string;
+  paidQty: number;
+  bonusQty: number;
+  totalUnits: number;
+  priceCents: number;
+  currency: string;
+};
+
 export type CartItem = {
+  id: string;
   product: CartProduct;
+  pack: CartPack | null;
   qty: number;
+  unitsReceived: number;
   lineTotal: number;
-  packQty?: number;
 };
 
 export type CartResponse = {
@@ -30,12 +42,12 @@ type ApiError = Error & { status?: number };
 type GuestCartLine = {
   slug: string;
   qty: number;
+  packId?: string;
 };
 
 type AnyRecord = Record<string, unknown>;
 
 const GUEST_CART_STORAGE_KEY = "evervale_guest_cart_v1";
-const CART_PACK_QTY_BY_SLUG_KEY = "evervale_cart_pack_qty_by_slug_v1";
 let guestCartSyncPromise: Promise<void> | null = null;
 
 function buildApiError(
@@ -96,6 +108,38 @@ function normalizeImage(image: unknown) {
   return { ...(id ? { id } : {}), url };
 }
 
+function normalizePack(rawPack: unknown, fallbackCurrency = "EUR") {
+  const pack = asRecord(rawPack);
+  if (!pack) return null;
+
+  const id = asString(pack.id).trim();
+  const name = asString(pack.name).trim();
+  const paidQty = Math.max(0, Math.trunc(asNumber(pack.paidQty, 0)));
+  const bonusQty = Math.max(0, Math.trunc(asNumber(pack.bonusQty, 0)));
+  const totalUnitsRaw = Math.trunc(asNumber(pack.totalUnits, 0));
+  const totalUnits = totalUnitsRaw > 0 ? totalUnitsRaw : paidQty + bonusQty;
+  const priceCents = Math.max(0, Math.trunc(asNumber(pack.priceCents, 0)));
+  const currency = asString(pack.currency, fallbackCurrency) || fallbackCurrency;
+
+  if (!id) return null;
+
+  return {
+    id,
+    name: name || "Pack",
+    paidQty,
+    bonusQty,
+    totalUnits: Math.max(1, totalUnits),
+    priceCents,
+    currency,
+  } satisfies CartPack;
+}
+
+function getGuestLineId(line: Pick<GuestCartLine, "slug" | "packId">) {
+  const slug = ensureProductSlug(line.slug);
+  const packId = line.packId?.trim() || "base";
+  return `${slug}::${packId}`;
+}
+
 function normalizeCart(raw: unknown): CartResponse {
   const cart = asRecord(raw);
   const id = asString(cart?.id, "cart");
@@ -114,40 +158,49 @@ function normalizeCart(raw: unknown): CartResponse {
       const resolvedSlug = productSlug || productId || "";
       if (!resolvedSlug) return null;
 
+      const itemId = asString(item.id).trim() || getGuestLineId({ slug: resolvedSlug });
       const qty = normalizeQty(asNumber(item.qty || item.quantity, 1));
-      const priceCents = Math.max(
-        0,
-        Math.trunc(
-          asNumber(product.priceCents, asNumber(item.unitPriceCents || item.priceCents, 0)),
-        ),
+
+      const productCurrency = asString(product.currency || item.currency, "EUR");
+      const unitPriceFallback = asNumber(
+        item.unitPriceCents || item.priceCents,
+        asNumber(product.priceCents, 0),
       );
       const lineTotal = Math.max(
         0,
-        Math.trunc(
-          asNumber(item.lineTotal || item.lineTotalCents, qty * priceCents),
-        ),
+        Math.trunc(asNumber(item.lineTotal || item.lineTotalCents, qty * unitPriceFallback)),
       );
+
       const images = Array.isArray(product.images)
         ? product.images
             .map((image) => normalizeImage(image))
             .filter((image): image is { id?: string; url: string } => Boolean(image))
         : [];
 
+      const pack = normalizePack(item.pack, productCurrency);
+      const unitsReceived = Math.max(
+        0,
+        Math.trunc(asNumber(item.unitsReceived, pack ? qty * pack.totalUnits : qty)),
+      );
+
       return {
+        id: itemId,
         product: {
           ...(productId ? { id: productId } : {}),
           slug: resolvedSlug,
           name: asString(product.name || item.productName, "Product"),
-          priceCents,
-          currency: asString(product.currency || item.currency, "EUR"),
+          priceCents: Math.max(0, Math.trunc(asNumber(product.priceCents, unitPriceFallback))),
+          currency: productCurrency,
           stockQty: Math.max(0, Math.trunc(asNumber(product.stockQty, 0))),
           images,
         },
+        pack,
         qty,
+        unitsReceived,
         lineTotal,
-      } as CartItem;
+      };
     })
-    .filter((line): line is CartItem => Boolean(line));
+    .filter(Boolean) as CartItem[];
 
   const subtotalCents = Math.max(
     0,
@@ -186,9 +239,18 @@ function readGuestCart(): GuestCartLine[] {
           typeof (line as { qty?: unknown }).qty === "number"
             ? (line as { qty: number }).qty
             : Number((line as { qty?: unknown }).qty);
+        const packIdRaw =
+          typeof (line as { packId?: unknown }).packId === "string"
+            ? (line as { packId: string }).packId.trim()
+            : "";
+
         const qty = Number.isFinite(qtyRaw) ? Math.trunc(qtyRaw) : 0;
         if (!slug || qty < 1) return null;
-        return { slug, qty: normalizeQty(qty) };
+        return {
+          slug,
+          qty: normalizeQty(qty),
+          ...(packIdRaw ? { packId: packIdRaw } : {}),
+        } satisfies GuestCartLine;
       })
       .filter((line): line is GuestCartLine => Boolean(line));
   } catch {
@@ -206,113 +268,40 @@ function clearGuestCart() {
   window.localStorage.removeItem(GUEST_CART_STORAGE_KEY);
 }
 
-function readCartPackQtyPreferences() {
-  if (typeof window === "undefined") return {} as Record<string, number>;
-  try {
-    const raw = window.localStorage.getItem(CART_PACK_QTY_BY_SLUG_KEY);
-    if (!raw) return {};
-
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return {};
-    }
-
-    return Object.entries(parsed as Record<string, unknown>).reduce<
-      Record<string, number>
-    >((acc, [slug, value]) => {
-      const normalizedSlug = typeof slug === "string" ? slug.trim() : "";
-      const qty =
-        typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
-      if (
-        normalizedSlug &&
-        Number.isFinite(qty) &&
-        Math.trunc(qty) >= 1
-      ) {
-        acc[normalizedSlug] = Math.trunc(qty);
-      }
-      return acc;
-    }, {});
-  } catch {
-    return {};
-  }
-}
-
-function writeCartPackQtyPreferences(next: Record<string, number>) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(CART_PACK_QTY_BY_SLUG_KEY, JSON.stringify(next));
-}
-
-function setCartPackQtyPreference(productSlug: string, packQty: number) {
-  if (typeof window === "undefined") return;
-  const normalizedSlug = ensureProductSlug(productSlug);
-  const normalizedPackQty = normalizeQty(packQty);
-  if (!normalizedSlug || normalizedPackQty < 1) return;
-
-  const prefs = readCartPackQtyPreferences();
-  prefs[normalizedSlug] = normalizedPackQty;
-  writeCartPackQtyPreferences(prefs);
-}
-
-function removeCartPackQtyPreference(productSlug: string) {
-  if (typeof window === "undefined") return;
-  const normalizedSlug = ensureProductSlug(productSlug);
-  if (!normalizedSlug) return;
-
-  const prefs = readCartPackQtyPreferences();
-  if (!(normalizedSlug in prefs)) return;
-  delete prefs[normalizedSlug];
-  writeCartPackQtyPreferences(prefs);
-}
-
-function clearCartPackQtyPreferences() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(CART_PACK_QTY_BY_SLUG_KEY);
-}
-
-function attachPackQtyPreferences(cart: CartResponse): CartResponse {
-  const prefs = readCartPackQtyPreferences();
-  if (Object.keys(prefs).length === 0) return cart;
-
-  return {
-    ...cart,
-    items: cart.items.map((item) => {
-      const preferredPackQty = prefs[item.product.slug];
-      if (!preferredPackQty || preferredPackQty < 1) {
-        return item;
-      }
-
-      return {
-        ...item,
-        packQty: preferredPackQty,
-      };
-    }),
-  };
-}
-
-function addGuestCartItem(productSlug: string, qty: number) {
+function addGuestCartItem(productSlug: string, qty: number, packId?: string) {
+  const normalizedPackId = packId?.trim() || undefined;
   const lines = readGuestCart();
-  const index = lines.findIndex((line) => line.slug === productSlug);
+  const index = lines.findIndex(
+    (line) =>
+      line.slug === productSlug &&
+      (line.packId?.trim() || undefined) === normalizedPackId,
+  );
+
   if (index >= 0) {
     lines[index] = {
       ...lines[index],
       qty: normalizeQty(lines[index].qty + qty),
     };
   } else {
-    lines.push({ slug: productSlug, qty: normalizeQty(qty) });
+    lines.push({
+      slug: productSlug,
+      qty: normalizeQty(qty),
+      ...(normalizedPackId ? { packId: normalizedPackId } : {}),
+    });
   }
   writeGuestCart(lines);
 }
 
-function updateGuestCartItem(productSlug: string, qty: number) {
+function updateGuestCartItem(itemId: string, qty: number) {
   const nextQty = normalizeQty(qty);
   const lines = readGuestCart().map((line) =>
-    line.slug === productSlug ? { ...line, qty: nextQty } : line,
+    getGuestLineId(line) === itemId ? { ...line, qty: nextQty } : line,
   );
   writeGuestCart(lines);
 }
 
-function removeGuestCartItem(productSlug: string) {
-  const lines = readGuestCart().filter((line) => line.slug !== productSlug);
+function removeGuestCartItem(itemId: string) {
+  const lines = readGuestCart().filter((line) => getGuestLineId(line) !== itemId);
   writeGuestCart(lines);
 }
 
@@ -337,15 +326,31 @@ async function buildGuestCartFromStorage(): Promise<CartResponse> {
     const slug = ensureProductSlug(product.slug || line.slug);
     if (!slug) continue;
 
-    validLines.push({ slug, qty: line.qty });
-    const unitPrice = Math.max(0, Math.trunc(product.priceCents ?? 0));
+    const pack = line.packId
+      ? product.packs?.find((entry) => entry.id === line.packId) || null
+      : null;
+
+    validLines.push({
+      slug,
+      qty: line.qty,
+      ...(line.packId ? { packId: line.packId } : {}),
+    });
+
+    const unitPrice = pack
+      ? Math.max(0, Math.trunc(pack.priceCents))
+      : Math.max(0, Math.trunc(product.priceCents ?? 0));
     const lineTotal = unitPrice * line.qty;
+    const unitsReceived = pack
+      ? Math.max(1, Math.trunc(pack.totalUnits)) * line.qty
+      : line.qty;
+
     items.push({
+      id: getGuestLineId(line),
       product: {
         id: product.id,
         slug,
         name: product.name || "Product",
-        priceCents: unitPrice,
+        priceCents: Math.max(0, Math.trunc(product.priceCents ?? 0)),
         currency: product.currency || "EUR",
         stockQty: Math.max(0, Math.trunc(product.stockQty ?? 0)),
         images:
@@ -354,7 +359,19 @@ async function buildGuestCartFromStorage(): Promise<CartResponse> {
             url: image.url,
           })) ?? [],
       },
+      pack: pack
+        ? {
+            id: pack.id,
+            name: pack.name,
+            paidQty: pack.paidQty,
+            bonusQty: pack.bonusQty,
+            totalUnits: pack.totalUnits,
+            priceCents: pack.priceCents,
+            currency: pack.currency,
+          }
+        : null,
       qty: line.qty,
+      unitsReceived,
       lineTotal,
     });
   }
@@ -370,13 +387,14 @@ async function buildGuestCartFromStorage(): Promise<CartResponse> {
   };
 }
 
-async function postCartItem(productSlug: string, qty: number) {
+async function postCartItem(productSlug: string, qty: number, packId?: string) {
   const response = await apiFetch("/cart/items", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       productSlug,
       qty: normalizeQty(qty),
+      ...(packId?.trim() ? { packId: packId.trim() } : {}),
     }),
   });
 
@@ -397,7 +415,7 @@ export async function syncLegacyGuestCartToApi() {
       const failed: GuestCartLine[] = [];
       for (const line of lines) {
         try {
-          await postCartItem(line.slug, line.qty);
+          await postCartItem(line.slug, line.qty, line.packId);
         } catch {
           failed.push(line);
         }
@@ -425,7 +443,7 @@ export async function fetchCart() {
   const response = await apiFetch("/cart");
   if (!response.ok) {
     if (!hasAccessToken()) {
-      return attachPackQtyPreferences(await buildGuestCartFromStorage());
+      return buildGuestCartFromStorage();
     }
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to load cart", response.status, error);
@@ -434,41 +452,36 @@ export async function fetchCart() {
   const normalized = normalizeCart(await response.json().catch(() => ({})));
   if (!hasAccessToken() && normalized.items.length === 0) {
     const guestCart = await buildGuestCartFromStorage();
-    if (guestCart.items.length > 0) return attachPackQtyPreferences(guestCart);
+    if (guestCart.items.length > 0) return guestCart;
   }
-  return attachPackQtyPreferences(normalized);
+  return normalized;
 }
 
-export async function addCartItem(productSlug: string, qty = 1) {
+export async function addCartItem(productSlug: string, qty = 1, packId?: string) {
   const normalizedProductSlug = ensureProductSlug(productSlug);
   if (!normalizedProductSlug) {
     throw buildApiError("Product is unavailable", 400);
   }
 
   const normalizedQty = normalizeQty(qty);
+  const normalizedPackId = packId?.trim() || undefined;
   const isGuest = !hasAccessToken();
   if (isGuest) {
-    addGuestCartItem(normalizedProductSlug, normalizedQty);
+    addGuestCartItem(normalizedProductSlug, normalizedQty, normalizedPackId);
   } else {
     await syncLegacyGuestCartToApi();
   }
 
   try {
-    await postCartItem(normalizedProductSlug, normalizedQty);
-    setCartPackQtyPreference(normalizedProductSlug, normalizedQty);
+    await postCartItem(normalizedProductSlug, normalizedQty, normalizedPackId);
     return { success: true };
   } catch (error) {
     if (isGuest) {
-      setCartPackQtyPreference(normalizedProductSlug, normalizedQty);
       return { success: true };
     }
 
-    // Token may have been cleared by apiFetch after a 401/failed refresh.
-    // In that case, complete the action using guest-cart storage instead of
-    // forcing the user to retry later.
     if (!hasAccessToken()) {
-      addGuestCartItem(normalizedProductSlug, normalizedQty);
-      setCartPackQtyPreference(normalizedProductSlug, normalizedQty);
+      addGuestCartItem(normalizedProductSlug, normalizedQty, normalizedPackId);
       return { success: true };
     }
 
@@ -476,20 +489,20 @@ export async function addCartItem(productSlug: string, qty = 1) {
   }
 }
 
-export async function updateCartItem(productSlug: string, qty: number) {
-  const normalizedProductSlug = ensureProductSlug(productSlug);
-  if (!normalizedProductSlug) {
-    throw buildApiError("Product slug is required", 400);
+export async function updateCartItem(itemId: string, qty: number) {
+  const normalizedItemId = itemId.trim();
+  if (!normalizedItemId) {
+    throw buildApiError("Cart item id is required", 400);
   }
 
   const normalizedQty = normalizeQty(qty);
   const isGuest = !hasAccessToken();
   if (isGuest) {
-    updateGuestCartItem(normalizedProductSlug, normalizedQty);
+    updateGuestCartItem(normalizedItemId, normalizedQty);
   }
 
   const response = await apiFetch(
-    `/cart/items/${encodeURIComponent(normalizedProductSlug)}`,
+    `/cart/items/${encodeURIComponent(normalizedItemId)}`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -507,19 +520,19 @@ export async function updateCartItem(productSlug: string, qty: number) {
   return response.json() as Promise<{ success: boolean }>;
 }
 
-export async function removeCartItem(productSlug: string) {
-  const normalizedProductSlug = ensureProductSlug(productSlug);
-  if (!normalizedProductSlug) {
-    throw buildApiError("Product slug is required", 400);
+export async function removeCartItem(itemId: string) {
+  const normalizedItemId = itemId.trim();
+  if (!normalizedItemId) {
+    throw buildApiError("Cart item id is required", 400);
   }
 
   const isGuest = !hasAccessToken();
   if (isGuest) {
-    removeGuestCartItem(normalizedProductSlug);
+    removeGuestCartItem(normalizedItemId);
   }
 
   const response = await apiFetch(
-    `/cart/items/${encodeURIComponent(normalizedProductSlug)}`,
+    `/cart/items/${encodeURIComponent(normalizedItemId)}`,
     {
       method: "DELETE",
     },
@@ -527,13 +540,11 @@ export async function removeCartItem(productSlug: string) {
 
   if (!response.ok) {
     if (isGuest) {
-      removeCartPackQtyPreference(normalizedProductSlug);
       return { success: true };
     }
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to remove item", response.status, error);
   }
-  removeCartPackQtyPreference(normalizedProductSlug);
   return response.json() as Promise<{ success: boolean }>;
 }
 
@@ -548,12 +559,10 @@ export async function clearCart() {
   });
   if (!response.ok) {
     if (isGuest) {
-      clearCartPackQtyPreferences();
       return { success: true };
     }
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to clear cart", response.status, error);
   }
-  clearCartPackQtyPreferences();
   return response.json() as Promise<{ success: boolean }>;
 }

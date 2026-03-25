@@ -115,12 +115,6 @@ function extractGeneticsText(product: ProductDetails, description: string) {
   return undefined;
 }
 
-const FIXED_VARIANT_PACKS = [
-  { paidQty: 1, bonusQty: 0, label: "1 seed" },
-  { paidQty: 3, bonusQty: 1, label: "3+1 seeds" },
-  { paidQty: 5, bonusQty: 2, label: "5+2 seeds" },
-  { paidQty: 10, bonusQty: 4, label: "10+4 seeds" },
-];
 const PRODUCT_DETAIL_REVALIDATE_SECONDS = 60;
 
 type SeedDetailProps = {
@@ -229,36 +223,25 @@ export default async function SeedDetailPage({ params }: SeedDetailProps) {
   const sortedImages = product?.images
     ? [...product.images].sort((a, b) => a.sortOrder - b.sortOrder)
     : [];
-  const priceCents = product.priceCents ?? 0;
   const currency = product.currency ?? "EUR";
-
-  const variants =
-    product.content?.variants?.filter(
-      (
-        variant,
-      ): variant is { label: string; priceCents?: number } =>
-        typeof variant.label === "string" && variant.label.trim().length > 0,
-    ) ?? [];
-  const baseVariant = variants
-    .map((variant) => {
-      const qtyMatch = variant.label.trim().match(/(\d+)/);
-      const qty = qtyMatch ? Number(qtyMatch[1]) : 1;
-      const priceCents = variant.priceCents ?? 0;
-      if (!Number.isFinite(qty) || qty < 1 || priceCents <= 0) return null;
-      return { qty, priceCents };
-    })
-    .filter((entry): entry is { qty: number; priceCents: number } => Boolean(entry))
-    .sort((a, b) => a.qty - b.qty)[0];
-
-  const baseUnitPriceCents =
-    baseVariant && baseVariant.qty > 0
-      ? Math.round(baseVariant.priceCents / baseVariant.qty)
-      : Math.max(0, Math.round(priceCents));
-
-  const variantPrices = FIXED_VARIANT_PACKS.map((pack) => ({
-    label: pack.label,
-    price: formatPrice(baseUnitPriceCents * pack.paidQty, currency),
-  }));
+  const baseOption = {
+    label: "1 seed",
+    price: formatPrice(product.priceCents ?? 0, currency),
+    qty: 1,
+  };
+  const packOptions =
+    product.packs && product.packs.length > 0
+      ? product.packs
+          .slice()
+          .sort((a, b) => a.totalUnits - b.totalUnits)
+          .map((pack) => ({
+            label: `${pack.name} (${pack.totalUnits} seeds)`,
+            price: formatPrice(pack.priceCents, pack.currency || currency),
+            qty: 1,
+            packId: pack.id,
+          }))
+      : [];
+  const variantPrices = [baseOption, ...packOptions];
 
   const effects =
     product.content?.effects ??

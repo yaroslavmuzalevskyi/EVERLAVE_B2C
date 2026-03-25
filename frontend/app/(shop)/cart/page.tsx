@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   fetchCart,
@@ -34,13 +35,6 @@ const initialAddress: AddressState = {
   phone: "",
 };
 
-const PACK_LABEL_BY_PAID_QTY: Record<number, string> = {
-  1: "1 seed",
-  3: "3+1 seeds",
-  5: "5+2 seeds",
-  10: "10+4 seeds",
-};
-
 export default function CartPage() {
   const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
   const router = useRouter();
@@ -50,7 +44,7 @@ export default function CartPage() {
   const [error, setError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
-  const [updatingProductSlug, setUpdatingProductSlug] = useState<string | null>(
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(
     null,
   );
   const [address, setAddress] = useState<AddressState>(initialAddress);
@@ -77,70 +71,40 @@ export default function CartPage() {
     loadCart();
   }, []);
 
-  const handleQtyChange = async (productId: string, qty: number) => {
+  const handleQtyChange = async (itemId: string, qty: number) => {
     if (qty < 1) return;
     try {
-      setUpdatingProductSlug(productId);
-      await updateCartItem(productId, qty);
+      setUpdatingItemId(itemId);
+      await updateCartItem(itemId, qty);
       await loadCart({ showSpinner: false });
     } finally {
-      setUpdatingProductSlug(null);
+      setUpdatingItemId(null);
     }
   };
 
-  const handleRemove = async (productId: string) => {
+  const handleRemove = async (itemId: string) => {
     try {
-      setUpdatingProductSlug(productId);
-      await removeCartItem(productId);
+      setUpdatingItemId(itemId);
+      await removeCartItem(itemId);
       await loadCart({ showSpinner: false });
     } finally {
-      setUpdatingProductSlug(null);
+      setUpdatingItemId(null);
     }
   };
 
   const handleClear = async () => {
     try {
-      setUpdatingProductSlug("__clear__");
+      setUpdatingItemId("__clear__");
       await clearCart();
       await loadCart({ showSpinner: false });
     } finally {
-      setUpdatingProductSlug(null);
+      setUpdatingItemId(null);
     }
   };
 
   const handleAddressChange = (field: keyof AddressState, value: string) => {
     setAddress((prev) => ({ ...prev, [field]: value }));
   };
-
-  const getItemProductSlug = (item: NonNullable<CartState>["items"][number]) =>
-    item.product.slug?.trim() || "";
-
-  const getPackPresentation = (item: NonNullable<CartState>["items"][number]) => {
-    const packQty =
-      typeof item.packQty === "number" && Number.isFinite(item.packQty)
-        ? Math.max(1, Math.trunc(item.packQty))
-        : null;
-
-    if (!packQty) return null;
-
-    const isExact = item.qty % packQty === 0;
-    if (!isExact) {
-      return {
-        packQty,
-        packCount: null,
-        stepQty: 1,
-      };
-    }
-
-    return {
-      packQty,
-      packCount: Math.max(1, Math.trunc(item.qty / packQty)),
-      stepQty: packQty,
-    };
-  };
-
-  const getPackDisplayLabel = (packQty: number) =>
-    PACK_LABEL_BY_PAID_QTY[packQty] ?? `${packQty} seeds`;
 
   const handleCheckout = async () => {
     setCheckoutError("");
@@ -199,7 +163,7 @@ export default function CartPage() {
               <button
                 type="button"
                 onClick={handleClear}
-                disabled={updatingProductSlug !== null}
+                disabled={updatingItemId !== null}
                 className="self-start rounded-full border border-pr_w/30 px-4 py-2 text-xs text-pr_w/80 disabled:opacity-60"
               >
                 Clear cart
@@ -219,32 +183,41 @@ export default function CartPage() {
             <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_0.6fr]">
               <div className="space-y-4">
                 {cart.items.map((item) => {
-                  const productSlug = getItemProductSlug(item);
-                  if (!productSlug) return null;
-                  const packPresentation = getPackPresentation(item);
-                  const qtyStep = packPresentation?.stepQty ?? 1;
-                  const displayQty = packPresentation?.packCount ?? item.qty;
-                  const qtyLabel = packPresentation?.packCount
-                    ? displayQty === 1
+                  const itemId = item.id?.trim();
+                  if (!itemId) return null;
+                  const isPack = Boolean(item.pack);
+                  const unitsPerPack = item.pack?.totalUnits ?? 1;
+                  const qtyLabel = isPack
+                    ? item.qty === 1
                       ? "pack"
                       : "packs"
-                    : displayQty === 1
+                    : item.qty === 1
                       ? "seed"
                       : "seeds";
 
                   return (
                     <div
-                      key={productSlug}
+                      key={itemId}
                       className="rounded-2xl bg-pr_w p-4 text-pr_dg"
                     >
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-4">
                           {item.product.images?.[0]?.url ? (
-                            <img
-                              src={item.product.images[0].url}
-                              alt={item.product.name}
-                              className="h-20 w-20 rounded-xl object-cover"
-                            />
+                            item.product.slug ? (
+                              <Link href={`/products/${item.product.slug}`} className="block">
+                                <img
+                                  src={item.product.images[0].url}
+                                  alt={item.product.name}
+                                  className="h-20 w-20 rounded-xl object-cover"
+                                />
+                              </Link>
+                            ) : (
+                              <img
+                                src={item.product.images[0].url}
+                                alt={item.product.name}
+                                className="h-20 w-20 rounded-xl object-cover"
+                              />
+                            )
                           ) : (
                             <div className="h-20 w-20 rounded-xl bg-sr_dg/20" />
                           )}
@@ -252,19 +225,11 @@ export default function CartPage() {
                             <p className="text-sm font-semibold">
                               {item.product.name}
                             </p>
-                            {packPresentation?.packCount ? (
+                            {isPack ? (
                               <p className="mt-1 text-xs text-pr_dg/60">
-                                {packPresentation.packCount}{" "}
-                                {packPresentation.packCount === 1
-                                  ? "pack"
-                                  : "packs"}{" "}
-                                ({getPackDisplayLabel(packPresentation.packQty)} per
-                                pack)
-                              </p>
-                            ) : packPresentation?.packQty ? (
-                              <p className="mt-1 text-xs text-pr_dg/60">
-                                {item.qty} seeds total (selected pack size:{" "}
-                                {getPackDisplayLabel(packPresentation.packQty)})
+                                {item.qty} {item.qty === 1 ? "pack" : "packs"} (
+                                {unitsPerPack}{" "}
+                                {unitsPerPack === 1 ? "seed" : "seeds"} per pack)
                               </p>
                             ) : (
                               <p className="mt-1 text-xs text-pr_dg/60">
@@ -285,9 +250,9 @@ export default function CartPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                handleQtyChange(productSlug, item.qty - qtyStep)
+                                handleQtyChange(itemId, item.qty - 1)
                               }
-                              disabled={updatingProductSlug === productSlug}
+                              disabled={updatingItemId === itemId}
                               className="h-8 w-8 rounded-full text-sm"
                             >
                               -
@@ -295,7 +260,7 @@ export default function CartPage() {
                             <span className="min-w-[72px] px-3 text-center">
                               <span className="inline-flex items-center gap-1.5">
                                 <span className="text-sm font-medium">
-                                  {displayQty}
+                                  {item.qty}
                                 </span>
                                 <span className="text-[10px] uppercase tracking-wide text-pr_dg/50">
                                   {qtyLabel}
@@ -305,9 +270,9 @@ export default function CartPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                handleQtyChange(productSlug, item.qty + qtyStep)
+                                handleQtyChange(itemId, item.qty + 1)
                               }
-                              disabled={updatingProductSlug === productSlug}
+                              disabled={updatingItemId === itemId}
                               className="h-8 w-8 rounded-full text-sm"
                             >
                               +
@@ -318,8 +283,8 @@ export default function CartPage() {
                           </p>
                           <button
                             type="button"
-                            onClick={() => handleRemove(productSlug)}
-                            disabled={updatingProductSlug === productSlug}
+                            onClick={() => handleRemove(itemId)}
+                            disabled={updatingItemId === itemId}
                             className="text-xs text-pr_dr"
                           >
                             Remove

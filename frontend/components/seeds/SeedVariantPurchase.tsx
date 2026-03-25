@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 type SeedVariantPurchaseProps = {
   productSlug: string;
-  variants: Array<{ label: string; price: string }>;
+  variants: Array<{ label: string; price: string; qty?: number; packId?: string }>;
   details?: ReactNode;
 };
 
@@ -30,7 +30,10 @@ export default function SeedVariantPurchase({
     () =>
       variants.map((variant) => ({
         ...variant,
-        qty: parseQtyFromLabel(variant.label),
+        qty:
+          typeof variant.qty === "number" && Number.isFinite(variant.qty)
+            ? Math.max(1, Math.trunc(variant.qty))
+            : parseQtyFromLabel(variant.label),
       })),
     [variants],
   );
@@ -66,6 +69,7 @@ export default function SeedVariantPurchase({
       <AddToCartButton
         productId={productSlug}
         qty={selectedQty}
+        packId={options[selectedIndex]?.packId}
         variant="primary"
         className="mt-5 w-full"
       />

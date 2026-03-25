@@ -37,6 +37,10 @@ function ensureRequiredOptions(
   source: ProductPurchaseOption[],
   fallbackPrice: string,
 ) {
+  if (source.some((option) => Boolean(option.packId))) {
+    return source;
+  }
+
   const byQty = new Map(source.map((option) => [option.qty, option]));
   const baseOption = source.find(
     (option) => option.qty > 0 && option.priceCents > 0,
@@ -190,6 +194,7 @@ export default function ProductCardPurchase({
           <AddToCartButton
             productId={productId}
             qty={selectedQty}
+            packId={selectedOption?.packId}
             label={buttonLabel}
             variant="category"
             className="w-full hover:translate-y-0 active:translate-y-0"

@@ -8,6 +8,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 type AddToCartButtonProps = {
   productId?: string;
   qty?: number;
+  packId?: string;
   label?: string;
   variant?: "header" | "contact" | "primary" | "category";
   className?: string;
@@ -18,6 +19,7 @@ type AddToCartButtonProps = {
 export default function AddToCartButton({
   productId,
   qty = 1,
+  packId,
   label = "Add to Cart +",
   variant = "category",
   className,
@@ -37,7 +39,7 @@ export default function AddToCartButton({
     try {
       setLoading(true);
       setFailed(false);
-      await addCartItem(productId, qty);
+      await addCartItem(productId, qty, packId);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("cart-item-added"));
       }

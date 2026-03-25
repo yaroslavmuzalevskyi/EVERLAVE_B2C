@@ -10,6 +10,16 @@ export type ProductCategory = {
   slug?: string;
 };
 
+export type ProductPack = {
+  id: string;
+  name: string;
+  paidQty: number;
+  bonusQty: number;
+  totalUnits: number;
+  priceCents: number;
+  currency: string;
+};
+
 export type ProductListItem = {
   id: string;
   slug?: string;
@@ -34,6 +44,7 @@ export type ProductListItem = {
   currency: string;
   stockQty?: number;
   images?: ProductImage[];
+  packs?: ProductPack[];
   category?: ProductCategory;
   soldCount?: number;
   ratingAvg?: number;
@@ -133,6 +144,8 @@ export type ProductPurchaseOption = {
   qty: number;
   priceCents: number;
   price: string;
+  packId?: string;
+  unitsReceived?: number;
 };
 
 function parseQtyFromVariantLabel(label: string) {
@@ -144,8 +157,47 @@ function parseQtyFromVariantLabel(label: string) {
 }
 
 export function getProductPurchaseOptions(
-  item: Pick<ProductListItem, "content" | "currency">,
+  item: Pick<ProductListItem, "content" | "currency" | "packs" | "priceCents">,
 ) {
+  const rawPacks = item.packs;
+  if (rawPacks && rawPacks.length > 0) {
+    const packOptions = rawPacks
+      .filter(
+        (pack): pack is ProductPack =>
+          Boolean(pack.id) &&
+          Boolean(pack.name) &&
+          Number.isFinite(pack.priceCents) &&
+          pack.priceCents > 0,
+      )
+      .map((pack) => ({
+        label: pack.name,
+        qty: 1,
+        priceCents: Math.max(0, Math.trunc(pack.priceCents)),
+        price: formatPrice(pack.priceCents, pack.currency || item.currency),
+        packId: pack.id,
+        unitsReceived:
+          Number.isFinite(pack.totalUnits) && pack.totalUnits > 0
+            ? Math.trunc(pack.totalUnits)
+            : undefined,
+      }))
+      .sort((a, b) => {
+        const aUnits = a.unitsReceived ?? 0;
+        const bUnits = b.unitsReceived ?? 0;
+        if (aUnits !== bUnits) return aUnits - bUnits;
+        return a.priceCents - b.priceCents;
+      });
+
+    return [
+      {
+        label: "1 seed",
+        qty: 1,
+        priceCents: Math.max(0, Math.trunc(item.priceCents)),
+        price: formatPrice(item.priceCents, item.currency),
+      },
+      ...packOptions,
+    ];
+  }
+
   const rawVariants = item.content?.variants;
   if (!rawVariants || rawVariants.length === 0) return [];
 
@@ -208,8 +260,26 @@ type RawProduct = {
     };
     effects?: string[];
     variants?: Array<{ label?: string; priceCents?: number }>;
+    packs?: Array<{
+      id?: string;
+      name?: string;
+      paidQty?: number;
+      bonusQty?: number;
+      totalUnits?: number;
+      priceCents?: number;
+      currency?: string;
+    }>;
     geneticBalance?: Record<string, number | undefined>;
   };
+  packs?: Array<{
+    id?: string;
+    name?: string;
+    paidQty?: number;
+    bonusQty?: number;
+    totalUnits?: number;
+    priceCents?: number;
+    currency?: string;
+  }>;
   description?: string;
   shortDescription?: string;
   summary?: string;
@@ -418,6 +488,73 @@ function normalizeContent(raw: RawProduct) {
   };
 }
 
+function normalizePacks(
+  rawPacks?: Array<{
+    id?: string;
+    name?: string;
+    paidQty?: number;
+    bonusQty?: number;
+    totalUnits?: number;
+    priceCents?: number;
+    currency?: string;
+  }>,
+) {
+  if (!Array.isArray(rawPacks) || rawPacks.length === 0) return undefined;
+
+  const packs = rawPacks
+    .map((pack) => {
+      if (!pack || typeof pack !== "object") return null;
+      const id = typeof pack.id === "string" ? pack.id.trim() : "";
+      const name = typeof pack.name === "string" ? pack.name.trim() : "";
+      const paidQtyRaw =
+        typeof pack.paidQty === "number" ? pack.paidQty : Number(pack.paidQty);
+      const bonusQtyRaw =
+        typeof pack.bonusQty === "number"
+          ? pack.bonusQty
+          : Number(pack.bonusQty);
+      const totalUnitsRaw =
+        typeof pack.totalUnits === "number"
+          ? pack.totalUnits
+          : Number(pack.totalUnits);
+      const priceCentsRaw =
+        typeof pack.priceCents === "number"
+          ? pack.priceCents
+          : Number(pack.priceCents);
+      const currency =
+        typeof pack.currency === "string" && pack.currency.trim()
+          ? pack.currency.trim()
+          : "EUR";
+
+      const paidQty = Number.isFinite(paidQtyRaw) ? Math.trunc(paidQtyRaw) : 0;
+      const bonusQty = Number.isFinite(bonusQtyRaw)
+        ? Math.trunc(bonusQtyRaw)
+        : 0;
+      const totalUnits = Number.isFinite(totalUnitsRaw)
+        ? Math.trunc(totalUnitsRaw)
+        : paidQty + Math.max(0, bonusQty);
+      const priceCents = Number.isFinite(priceCentsRaw)
+        ? Math.trunc(priceCentsRaw)
+        : 0;
+
+      if (!id || !name || paidQty < 1 || totalUnits < 1 || priceCents < 0) {
+        return null;
+      }
+
+      return {
+        id,
+        name,
+        paidQty,
+        bonusQty: Math.max(0, bonusQty),
+        totalUnits,
+        priceCents,
+        currency,
+      } satisfies ProductPack;
+    })
+    .filter((pack): pack is ProductPack => Boolean(pack));
+
+  return packs.length > 0 ? packs : undefined;
+}
+
 function normalizeProduct(raw: RawProduct): ProductDetails {
   const id =
     raw.id ||
@@ -466,6 +603,7 @@ function normalizeProduct(raw: RawProduct): ProductDetails {
     currency: normalizeCurrency(raw),
     stockQty: raw.stockQty ?? raw.stock,
     images: normalizeImages(raw.images, raw.image),
+    packs: normalizePacks(raw.packs ?? raw.content?.packs),
     category: normalizeCategory(raw),
     soldCount: raw.soldCount ?? raw.sold,
     ratingAvg: raw.ratingAvg ?? raw.rating,
