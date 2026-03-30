@@ -499,6 +499,7 @@ export async function updateCartItem(itemId: string, qty: number) {
   const isGuest = !hasAccessToken();
   if (isGuest) {
     updateGuestCartItem(normalizedItemId, normalizedQty);
+    return { success: true };
   }
 
   const response = await apiFetch(
@@ -529,6 +530,7 @@ export async function removeCartItem(itemId: string) {
   const isGuest = !hasAccessToken();
   if (isGuest) {
     removeGuestCartItem(normalizedItemId);
+    return { success: true };
   }
 
   const response = await apiFetch(
