@@ -462,19 +462,11 @@ export async function fetchCart() {
 
   const response = await apiFetch("/cart");
   if (!response.ok) {
-    if (!hasAccessToken()) {
-      return buildGuestCartFromStorage();
-    }
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to load cart", response.status, error);
   }
 
-  const normalized = normalizeCart(await response.json().catch(() => ({})));
-  if (!hasAccessToken() && normalized.items.length === 0) {
-    const guestCart = await buildGuestCartFromStorage();
-    if (guestCart.items.length > 0) return guestCart;
-  }
-  return normalized;
+  return normalizeCart(await response.json().catch(() => ({})));
 }
 
 export async function addCartItem(
@@ -487,30 +479,12 @@ export async function addCartItem(
     throw buildApiError("Product is unavailable", 400);
   }
 
-  const normalizedQty = normalizeQty(qty);
-  const normalizedPackId = packId?.trim() || undefined;
-  const isGuest = !hasAccessToken();
-  if (isGuest) {
-    addGuestCartItem(normalizedProductSlug, normalizedQty, normalizedPackId);
-  } else {
-    await syncLegacyGuestCartToApi();
-  }
-
-  try {
-    await postCartItem(normalizedProductSlug, normalizedQty, normalizedPackId);
-    return { success: true };
-  } catch (error) {
-    if (isGuest) {
-      return { success: true };
-    }
-
-    if (!hasAccessToken()) {
-      addGuestCartItem(normalizedProductSlug, normalizedQty, normalizedPackId);
-      return { success: true };
-    }
-
-    throw error;
-  }
+  await postCartItem(
+    normalizedProductSlug,
+    normalizeQty(qty),
+    packId?.trim() || undefined,
+  );
+  return { success: true };
 }
 
 export async function updateCartItem(itemId: string, qty: number) {
@@ -519,26 +493,16 @@ export async function updateCartItem(itemId: string, qty: number) {
     throw buildApiError("Cart item id is required", 400);
   }
 
-  const normalizedQty = normalizeQty(qty);
-  const isGuest = !hasAccessToken();
-  if (isGuest) {
-    updateGuestCartItem(normalizedItemId, normalizedQty);
-    return { success: true }; // ← returns early for guests
-  }
-
   const response = await apiFetch(
     `/cart/items/${encodeURIComponent(normalizedItemId)}`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ qty: normalizedQty }),
+      body: JSON.stringify({ qty: normalizeQty(qty) }),
     },
   );
 
   if (!response.ok) {
-    if (isGuest) {
-      return { success: true };
-    }
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to update item", response.status, error);
   }
@@ -551,23 +515,12 @@ export async function removeCartItem(itemId: string) {
     throw buildApiError("Cart item id is required", 400);
   }
 
-  const isGuest = !hasAccessToken();
-  if (isGuest) {
-    removeGuestCartItem(normalizedItemId);
-    return { success: true };
-  }
-
   const response = await apiFetch(
     `/cart/items/${encodeURIComponent(normalizedItemId)}`,
-    {
-      method: "DELETE",
-    },
+    { method: "DELETE" },
   );
 
   if (!response.ok) {
-    if (isGuest) {
-      return { success: true };
-    }
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to remove item", response.status, error);
   }
@@ -575,18 +528,8 @@ export async function removeCartItem(itemId: string) {
 }
 
 export async function clearCart() {
-  const isGuest = !hasAccessToken();
-  if (isGuest) {
-    clearGuestCart();
-  }
-
-  const response = await apiFetch("/cart", {
-    method: "DELETE",
-  });
+  const response = await apiFetch("/cart", { method: "DELETE" });
   if (!response.ok) {
-    if (isGuest) {
-      return { success: true };
-    }
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to clear cart", response.status, error);
   }

@@ -78,9 +78,6 @@ async function fetchWithFallback(
   for (let index = 0; index < urls.length; index += 1) {
     const url = urls[index];
     try {
-      // No credentials: "include" — auth is handled via Bearer token in headers.
-      // Same-site cookie (cartToken) works fine in production without it,
-      // and adding it breaks CORS preflight for PATCH/DELETE on cross-origin dev.
       const response = await fetch(url, init);
 
       if (
@@ -165,9 +162,16 @@ export async function apiFetch(
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
+  // Guests have no Bearer token — use cookie-based cartToken session instead.
+  // Logged-in users rely purely on Bearer token, no credentials needed.
+  const credentials: RequestCredentials = accessToken
+    ? "same-origin"
+    : "include";
+
   const response = await fetchWithFallback(input, {
     ...init,
     headers,
+    credentials,
   });
 
   if (response.status !== 401) return response;
@@ -194,5 +198,6 @@ export async function apiFetch(
   return fetchWithFallback(input, {
     ...init,
     headers,
+    credentials,
   });
 }
