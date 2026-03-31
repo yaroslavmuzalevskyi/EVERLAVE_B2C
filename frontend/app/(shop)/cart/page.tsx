@@ -44,9 +44,7 @@ export default function CartPage() {
   const [error, setError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
-  const [updatingItemId, setUpdatingItemId] = useState<string | null>(
-    null,
-  );
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [address, setAddress] = useState<AddressState>(initialAddress);
 
   const loadCart = async (options?: { showSpinner?: boolean }) => {
@@ -73,30 +71,36 @@ export default function CartPage() {
 
   const handleQtyChange = async (itemId: string, qty: number) => {
     if (qty < 1) return;
+    setUpdatingItemId(itemId);
     try {
-      setUpdatingItemId(itemId);
       await updateCartItem(itemId, qty);
       await loadCart({ showSpinner: false });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update item");
     } finally {
       setUpdatingItemId(null);
     }
   };
 
   const handleRemove = async (itemId: string) => {
+    setUpdatingItemId(itemId);
     try {
-      setUpdatingItemId(itemId);
       await removeCartItem(itemId);
       await loadCart({ showSpinner: false });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove item");
     } finally {
       setUpdatingItemId(null);
     }
   };
 
   const handleClear = async () => {
+    setUpdatingItemId("__clear__");
     try {
-      setUpdatingItemId("__clear__");
       await clearCart();
       await loadCart({ showSpinner: false });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to clear cart");
     } finally {
       setUpdatingItemId(null);
     }
@@ -146,9 +150,7 @@ export default function CartPage() {
       await loadCart();
       router.push("/user_profile/orders");
     } catch (err) {
-      setCheckoutError(
-        err instanceof Error ? err.message : "Checkout failed",
-      );
+      setCheckoutError(err instanceof Error ? err.message : "Checkout failed");
     } finally {
       setCheckoutLoading(false);
     }
@@ -157,253 +159,257 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-pr_dg text-pr_w">
       <section className="w-full px-4 pt-[120px] pb-24 sm:px-6 md:px-8 lg:px-12 xl:px-[130px]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <h1 className="text-2xl font-semibold">Cart</h1>
-            {cart?.items?.length ? (
-              <button
-                type="button"
-                onClick={handleClear}
-                disabled={updatingItemId !== null}
-                className="self-start rounded-full border border-pr_w/30 px-4 py-2 text-xs text-pr_w/80 disabled:opacity-60"
-              >
-                Clear cart
-              </button>
-            ) : null}
-          </div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <h1 className="text-2xl font-semibold">Cart</h1>
+          {cart?.items?.length ? (
+            <button
+              type="button"
+              onClick={handleClear}
+              disabled={updatingItemId !== null}
+              className="self-start rounded-full border border-pr_w/30 px-4 py-2 text-xs text-pr_w/80 disabled:opacity-60"
+            >
+              Clear cart
+            </button>
+          ) : null}
+        </div>
 
-          {loading && !cart ? (
-            <p className="mt-6 text-sm text-pr_w/70">Loading cart...</p>
-          ) : error ? (
-            <p className="mt-6 text-sm text-pr_dr">{error}</p>
-          ) : !cart || cart.items.length === 0 ? (
-            <p className="mt-6 text-sm text-pr_w/70">
-              Your cart is empty right now.
-            </p>
-          ) : (
-            <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_0.6fr]">
-              <div className="space-y-4">
-                {cart.items.map((item) => {
-                  const itemId = item.id?.trim();
-                  if (!itemId) return null;
-                  const isPack = Boolean(item.pack);
-                  const unitsPerPack = item.pack?.totalUnits ?? 1;
-                  const qtyLabel = isPack
-                    ? item.qty === 1
-                      ? "pack"
-                      : "packs"
-                    : item.qty === 1
-                      ? "seed"
-                      : "seeds";
+        {loading && !cart ? (
+          <p className="mt-6 text-sm text-pr_w/70">Loading cart...</p>
+        ) : error ? (
+          <p className="mt-6 text-sm text-pr_dr">{error}</p>
+        ) : !cart || cart.items.length === 0 ? (
+          <p className="mt-6 text-sm text-pr_w/70">
+            Your cart is empty right now.
+          </p>
+        ) : (
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_0.6fr]">
+            <div className="space-y-4">
+              {cart.items.map((item) => {
+                const itemId = item.id?.trim();
+                if (!itemId) return null;
+                const isPack = Boolean(item.pack);
+                const unitsPerPack = item.pack?.totalUnits ?? 1;
+                const qtyLabel = isPack
+                  ? item.qty === 1
+                    ? "pack"
+                    : "packs"
+                  : item.qty === 1
+                    ? "seed"
+                    : "seeds";
 
-                  return (
-                    <div
-                      key={itemId}
-                      className="rounded-2xl bg-pr_w p-4 text-pr_dg"
-                    >
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-4">
-                          {item.product.images?.[0]?.url ? (
-                            item.product.slug ? (
-                              <Link href={`/products/${item.product.slug}`} className="block">
-                                <img
-                                  src={item.product.images[0].url}
-                                  alt={item.product.name}
-                                  className="h-20 w-20 rounded-xl object-cover"
-                                />
-                              </Link>
-                            ) : (
+                return (
+                  <div
+                    key={itemId}
+                    className="rounded-2xl bg-pr_w p-4 text-pr_dg"
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-4">
+                        {item.product.images?.[0]?.url ? (
+                          item.product.slug ? (
+                            <Link
+                              href={`/products/${item.product.slug}`}
+                              className="block"
+                            >
                               <img
                                 src={item.product.images[0].url}
                                 alt={item.product.name}
                                 className="h-20 w-20 rounded-xl object-cover"
                               />
-                            )
+                            </Link>
                           ) : (
-                            <div className="h-20 w-20 rounded-xl bg-sr_dg/20" />
-                          )}
-                          <div>
-                            <p className="text-sm font-semibold">
-                              {item.product.name}
-                            </p>
-                            {isPack ? (
-                              <p className="mt-1 text-xs text-pr_dg/60">
-                                {item.qty} {item.qty === 1 ? "pack" : "packs"} (
-                                {unitsPerPack}{" "}
-                                {unitsPerPack === 1 ? "seed" : "seeds"} per pack)
-                              </p>
-                            ) : (
-                              <p className="mt-1 text-xs text-pr_dg/60">
-                                {item.qty} {item.qty === 1 ? "seed" : "seeds"} total
-                              </p>
-                            )}
-                            <p className="mt-1 text-xs text-pr_dg/60">
-                              {formatPrice(
-                                item.product.priceCents,
-                                item.product.currency,
-                              )}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center rounded-full border border-pr_dg/20">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleQtyChange(itemId, item.qty - 1)
-                              }
-                              disabled={updatingItemId === itemId}
-                              className="h-8 w-8 rounded-full text-sm"
-                            >
-                              -
-                            </button>
-                            <span className="min-w-[72px] px-3 text-center">
-                              <span className="inline-flex items-center gap-1.5">
-                                <span className="text-sm font-medium">
-                                  {item.qty}
-                                </span>
-                                <span className="text-[10px] uppercase tracking-wide text-pr_dg/50">
-                                  {qtyLabel}
-                                </span>
-                              </span>
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleQtyChange(itemId, item.qty + 1)
-                              }
-                              disabled={updatingItemId === itemId}
-                              className="h-8 w-8 rounded-full text-sm"
-                            >
-                              +
-                            </button>
-                          </div>
+                            <img
+                              src={item.product.images[0].url}
+                              alt={item.product.name}
+                              className="h-20 w-20 rounded-xl object-cover"
+                            />
+                          )
+                        ) : (
+                          <div className="h-20 w-20 rounded-xl bg-sr_dg/20" />
+                        )}
+                        <div>
                           <p className="text-sm font-semibold">
-                            {formatPrice(item.lineTotal, item.product.currency)}
+                            {item.product.name}
                           </p>
-                          <button
-                            type="button"
-                            onClick={() => handleRemove(itemId)}
-                            disabled={updatingItemId === itemId}
-                            className="text-xs text-pr_dr"
-                          >
-                            Remove
-                          </button>
+                          {isPack ? (
+                            <p className="mt-1 text-xs text-pr_dg/60">
+                              {item.qty} {item.qty === 1 ? "pack" : "packs"} (
+                              {unitsPerPack}{" "}
+                              {unitsPerPack === 1 ? "seed" : "seeds"} per pack)
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-xs text-pr_dg/60">
+                              {item.qty} {item.qty === 1 ? "seed" : "seeds"}{" "}
+                              total
+                            </p>
+                          )}
+                          <p className="mt-1 text-xs text-pr_dg/60">
+                            {formatPrice(
+                              item.product.priceCents,
+                              item.product.currency,
+                            )}
+                          </p>
                         </div>
                       </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center rounded-full border border-pr_dg/20">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQtyChange(itemId, item.qty - 1)
+                            }
+                            disabled={updatingItemId === itemId}
+                            className="h-8 w-8 rounded-full text-sm"
+                          >
+                            -
+                          </button>
+                          <span className="min-w-[72px] px-3 text-center">
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="text-sm font-medium">
+                                {item.qty}
+                              </span>
+                              <span className="text-[10px] uppercase tracking-wide text-pr_dg/50">
+                                {qtyLabel}
+                              </span>
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQtyChange(itemId, item.qty + 1)
+                            }
+                            disabled={updatingItemId === itemId}
+                            className="h-8 w-8 rounded-full text-sm"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <p className="text-sm font-semibold">
+                          {formatPrice(item.lineTotal, item.product.currency)}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => handleRemove(itemId)}
+                          disabled={updatingItemId === itemId}
+                          className="text-xs text-pr_dr"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                  );
-                })}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="rounded-2xl bg-pr_w p-6 text-pr_dg h-fit">
+              <h2 className="text-sm font-semibold">Order summary</h2>
+              <div className="mt-4 flex items-center justify-between text-sm">
+                <span>Subtotal</span>
+                <span className="font-semibold">
+                  {formatPrice(
+                    cart.subtotalCents,
+                    cart.items[0]?.product.currency ?? "EUR",
+                  )}
+                </span>
               </div>
 
-              <div className="rounded-2xl bg-pr_w p-6 text-pr_dg h-fit">
-                <h2 className="text-sm font-semibold">Order summary</h2>
-                <div className="mt-4 flex items-center justify-between text-sm">
-                  <span>Subtotal</span>
-                  <span className="font-semibold">
-                    {formatPrice(
-                      cart.subtotalCents,
-                      cart.items[0]?.product.currency ?? "EUR",
-                    )}
-                  </span>
-                </div>
-
-                <div className="mt-6 border-t border-pr_dg/10 pt-5">
-                  <p className="text-sm font-semibold">Delivery address</p>
-                  <div className="mt-3 space-y-3 text-xs">
+              <div className="mt-6 border-t border-pr_dg/10 pt-5">
+                <p className="text-sm font-semibold">Delivery address</p>
+                <div className="mt-3 space-y-3 text-xs">
+                  <input
+                    type="text"
+                    value={address.fullName}
+                    onChange={(event) =>
+                      handleAddressChange("fullName", event.target.value)
+                    }
+                    placeholder="Full name"
+                    className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={address.line1}
+                    onChange={(event) =>
+                      handleAddressChange("line1", event.target.value)
+                    }
+                    placeholder="Street address"
+                    className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={address.line2}
+                    onChange={(event) =>
+                      handleAddressChange("line2", event.target.value)
+                    }
+                    placeholder="Line 2 (optional)"
+                    className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
+                  />
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <input
                       type="text"
-                      value={address.fullName}
+                      value={address.city}
                       onChange={(event) =>
-                        handleAddressChange("fullName", event.target.value)
+                        handleAddressChange("city", event.target.value)
                       }
-                      placeholder="Full name"
+                      placeholder="City"
                       className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
                     />
                     <input
                       type="text"
-                      value={address.line1}
+                      value={address.postalCode}
                       onChange={(event) =>
-                        handleAddressChange("line1", event.target.value)
+                        handleAddressChange("postalCode", event.target.value)
                       }
-                      placeholder="Street address"
-                      className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
-                    />
-                    <input
-                      type="text"
-                      value={address.line2}
-                      onChange={(event) =>
-                        handleAddressChange("line2", event.target.value)
-                      }
-                      placeholder="Line 2 (optional)"
-                      className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
-                    />
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <input
-                        type="text"
-                        value={address.city}
-                        onChange={(event) =>
-                          handleAddressChange("city", event.target.value)
-                        }
-                        placeholder="City"
-                        className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
-                      />
-                      <input
-                        type="text"
-                        value={address.postalCode}
-                        onChange={(event) =>
-                          handleAddressChange("postalCode", event.target.value)
-                        }
-                        placeholder="Postal code"
-                        className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      value={address.country}
-                      onChange={(event) =>
-                        handleAddressChange("country", event.target.value)
-                      }
-                      placeholder="Country"
-                      className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
-                    />
-                    <input
-                      type="text"
-                      value={address.phone}
-                      onChange={(event) =>
-                        handleAddressChange("phone", event.target.value)
-                      }
-                      placeholder="Phone (optional)"
+                      placeholder="Postal code"
                       className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
                     />
                   </div>
+                  <input
+                    type="text"
+                    value={address.country}
+                    onChange={(event) =>
+                      handleAddressChange("country", event.target.value)
+                    }
+                    placeholder="Country"
+                    className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={address.phone}
+                    onChange={(event) =>
+                      handleAddressChange("phone", event.target.value)
+                    }
+                    placeholder="Phone (optional)"
+                    className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
+                  />
                 </div>
-
-                {checkoutError ? (
-                  <p className="mt-3 text-xs text-pr_dr">{checkoutError}</p>
-                ) : null}
-
-                {!isAuthenticated && !disableAuth ? (
-                  <p className="mt-3 text-xs text-pr_dg/70">
-                    Sign in to complete checkout.
-                  </p>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={handleCheckout}
-                  disabled={checkoutLoading}
-                  className="mt-5 w-full rounded-full bg-pr_dg px-4 py-2 text-sm font-semibold text-pr_w disabled:opacity-60"
-                >
-                  {checkoutLoading
-                    ? "Processing..."
-                    : !isAuthenticated && !disableAuth
-                      ? "Sign in to checkout"
-                      : "Proceed to checkout"}
-                </button>
               </div>
+
+              {checkoutError ? (
+                <p className="mt-3 text-xs text-pr_dr">{checkoutError}</p>
+              ) : null}
+
+              {!isAuthenticated && !disableAuth ? (
+                <p className="mt-3 text-xs text-pr_dg/70">
+                  Sign in to complete checkout.
+                </p>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={handleCheckout}
+                disabled={checkoutLoading}
+                className="mt-5 w-full rounded-full bg-pr_dg px-4 py-2 text-sm font-semibold text-pr_w disabled:opacity-60"
+              >
+                {checkoutLoading
+                  ? "Processing..."
+                  : !isAuthenticated && !disableAuth
+                    ? "Sign in to checkout"
+                    : "Proceed to checkout"}
+              </button>
             </div>
-          )}
+          </div>
+        )}
       </section>
     </div>
   );
