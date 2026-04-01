@@ -45,7 +45,6 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <GoogleTagManager gtmId="GTM-T3SWJ2DB" />
-        <GoogleAnalytics gaId="G-6KY8PMBBEP" />
         <AuthProvider>
           <ScrollReveal />
           {children}
