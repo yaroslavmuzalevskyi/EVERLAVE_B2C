@@ -479,11 +479,16 @@ export async function addCartItem(
     throw buildApiError("Product is unavailable", 400);
   }
 
-  await postCartItem(
-    normalizedProductSlug,
-    normalizeQty(qty),
-    packId?.trim() || undefined,
-  );
+  const normalizedQty = normalizeQty(qty);
+  const normalizedPackId = packId?.trim() || undefined;
+
+  // Mirror guest additions to localStorage so syncLegacyGuestCartToApi
+  // can merge them into the authenticated cart after login.
+  if (!hasAccessToken()) {
+    addGuestCartItem(normalizedProductSlug, normalizedQty, normalizedPackId);
+  }
+
+  await postCartItem(normalizedProductSlug, normalizedQty, normalizedPackId);
   return { success: true };
 }
 
