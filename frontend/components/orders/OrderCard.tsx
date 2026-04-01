@@ -31,9 +31,11 @@ export default function OrderCard({
           <p className="text-lg font-semibold">{orderId}</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="rounded-full border border-pr_dg/30 px-4 py-2 text-xs">
-            {statusDate}
-          </span>
+          {statusDate !== statusLabel ? (
+            <span className="rounded-full border border-pr_dg/30 px-4 py-2 text-xs">
+              {statusDate}
+            </span>
+          ) : null}
           <span className="rounded-full border border-pr_dg/30 px-4 py-2 text-xs">
             {statusLabel}
           </span>
