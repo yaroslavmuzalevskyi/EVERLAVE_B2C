@@ -6,6 +6,9 @@ type OrderCardProps = {
   total: string;
   statusDate: string;
   statusLabel: string;
+  rawStatus?: string;
+  onResumePayment?: (orderId: string) => void;
+  resuming?: boolean;
 };
 
 export default function OrderCard({
@@ -16,6 +19,9 @@ export default function OrderCard({
   total,
   statusDate,
   statusLabel,
+  rawStatus,
+  onResumePayment,
+  resuming,
 }: OrderCardProps) {
   return (
     <div className="w-full rounded-2xl bg-pr_w px-6 py-5 text-pr_dg shadow-sm">
@@ -31,6 +37,16 @@ export default function OrderCard({
           <span className="rounded-full border border-pr_dg/30 px-4 py-2 text-xs">
             {statusLabel}
           </span>
+          {rawStatus === "PENDING" && onResumePayment ? (
+            <button
+              type="button"
+              onClick={() => onResumePayment(orderId)}
+              disabled={resuming}
+              className="rounded-full bg-pr_dg px-4 py-2 text-xs text-pr_w disabled:opacity-60"
+            >
+              {resuming ? "Loading..." : "Resume payment"}
+            </button>
+          ) : null}
         </div>
       </div>
 

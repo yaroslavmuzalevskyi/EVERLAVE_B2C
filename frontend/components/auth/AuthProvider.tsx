@@ -406,7 +406,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearTokens();
       clearSessionLastSeenAt();
       setAccessTokenState(null);
-      router.push("/signin");
+      router.push("/");
     }
   }, [router]);
 

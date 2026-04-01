@@ -45,6 +45,7 @@ export type CheckoutResponse = {
   status: string;
   totalAmountCents: number;
   currency: string;
+  url?: string;
 };
 
 export async function fetchOrders(params: {
@@ -90,6 +91,21 @@ export async function checkout(address: OrderAddress) {
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(error?.message || "Checkout failed");
+  }
+
+  return (await response.json()) as CheckoutResponse;
+}
+
+export async function resumeCheckout(orderId: string) {
+  const response = await apiFetch("/checkout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orderId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error?.message || "Failed to resume checkout");
   }
 
   return (await response.json()) as CheckoutResponse;

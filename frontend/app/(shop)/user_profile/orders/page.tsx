@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import OrderCard from "@/components/orders/OrderCard";
 import RequireAuth from "@/components/auth/RequireAuth";
 import UserHeader from "@/components/userProfile/UserHeader";
-import { fetchOrders, Order } from "@/services/orders";
+import { fetchOrders, Order, resumeCheckout } from "@/services/orders";
 import { formatPrice } from "@/services/products";
 import { getStoredProfileName } from "@/lib/userProfile";
 
@@ -29,13 +29,15 @@ const fallbackOrders = [
   },
 ];
 
-type DisplayOrder = (typeof fallbackOrders)[number];
+type DisplayOrder = (typeof fallbackOrders)[number] & {
+  rawStatus?: string;
+};
 
 type FilterKey = "delivered" | "arrived" | "canceled" | "all";
 
 const statusLabelMap: Record<string, string> = {
   PENDING: "Processing",
-  PAID: "Processing",
+  PAID: "Paid",
   SHIPPED: "Delivery",
   DELIVERED: "Delivery",
   COMPLETED: "Completed",
@@ -81,6 +83,7 @@ const buildDisplayOrder = (order: Order): DisplayOrder => {
     total: formatPrice(order.totalAmountCents, order.currency),
     statusDate,
     statusLabel,
+    rawStatus: order.status,
   };
 };
 
@@ -93,6 +96,21 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [resumingOrderId, setResumingOrderId] = useState<string | null>(null);
+
+  const handleResumePayment = async (orderId: string) => {
+    setResumingOrderId(orderId);
+    try {
+      const result = await resumeCheckout(orderId);
+      if (result.url) {
+        window.location.href = result.url;
+      }
+    } catch {
+      // silently fail — user can retry
+    } finally {
+      setResumingOrderId(null);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -224,7 +242,12 @@ export default function OrdersPage() {
                   </div>
                 ) : filteredOrders.length > 0 ? (
                   filteredOrders.map((order) => (
-                    <OrderCard key={order.orderId} {...order} />
+                    <OrderCard
+                      key={order.orderId}
+                      {...order}
+                      onResumePayment={handleResumePayment}
+                      resuming={resumingOrderId === order.orderId}
+                    />
                   ))
                 ) : (
                   <div className="rounded-2xl bg-pr_w p-6 text-sm text-pr_dg/70">

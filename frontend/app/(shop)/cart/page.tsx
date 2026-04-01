@@ -136,7 +136,7 @@ export default function CartPage() {
 
     try {
       setCheckoutLoading(true);
-      await checkout({
+      const result = await checkout({
         fullName: address.fullName.trim(),
         line1: address.line1.trim(),
         city: address.city.trim(),
@@ -148,7 +148,11 @@ export default function CartPage() {
 
       setAddress(initialAddress);
       await loadCart();
-      router.push("/user_profile/orders");
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        router.push("/user_profile/orders");
+      }
     } catch (err) {
       setCheckoutError(err instanceof Error ? err.message : "Checkout failed");
     } finally {
