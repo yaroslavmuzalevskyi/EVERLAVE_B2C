@@ -291,6 +291,12 @@ button:disabled,
   }
 }
 
-#cky-btn-revisit {
+#cky-btn-revisit,
+#cky-btn-revisit-wrapper,
+.cky-btn-revisit-wrapper,
+.cky-revisit-bottom-left {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }

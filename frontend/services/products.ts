@@ -170,7 +170,7 @@ export function getProductPurchaseOptions(
           pack.priceCents > 0,
       )
       .map((pack) => ({
-        label: pack.name,
+        label: pack.bonusQty > 0 ? `${pack.name} (+${pack.bonusQty})` : pack.name,
         qty: 1,
         priceCents: Math.max(0, Math.trunc(pack.priceCents)),
         price: formatPrice(pack.priceCents, pack.currency || item.currency),
