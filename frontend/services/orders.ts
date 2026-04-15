@@ -96,6 +96,37 @@ export async function checkout(address: OrderAddress) {
   return (await response.json()) as CheckoutResponse;
 }
 
+export type DeliveryCountry = {
+  code: string;
+  name: string;
+};
+
+export type DeliveryOption = {
+  id: string;
+  type: string;
+  priceCents: number;
+  freeShippingThresholdCents: number;
+  supportsFreeDelivery: boolean;
+  passesFreeDeliveryThreshold: boolean;
+  currency: string;
+  indicativeDeliveryDuration: string | null;
+  displayName: string;
+};
+
+export async function fetchDeliveryCountries(): Promise<DeliveryCountry[]> {
+  const response = await apiFetch("/cart/delivery-countries");
+  if (!response.ok) return [];
+  const data = await response.json().catch(() => ({}));
+  return data.countries ?? [];
+}
+
+export async function fetchDeliveryOptions(countryCode: string): Promise<DeliveryOption[]> {
+  const response = await apiFetch(`/cart/delivery-options?country=${encodeURIComponent(countryCode)}`);
+  if (!response.ok) return [];
+  const data = await response.json().catch(() => ({}));
+  return data.options ?? [];
+}
+
 export async function resumeCheckout(orderId: string) {
   const response = await apiFetch("/checkout", {
     method: "POST",

@@ -1,5 +1,25 @@
+import Image from "next/image";
 import FooterColumn from "@/components/common/FooterColumn";
 import Logo from "@/components/ui/Logo";
+import facebook from "@/public/icons/facebook-logo.svg";
+import twitter from "@/public/icons/twitter-logo.svg";
+import linkedin from "@/public/icons/linkedin-logo.svg";
+import instagram from "@/public/icons/instagram-logo.svg";
+
+const socials = [
+  { label: "Facebook", icon: facebook, href: "" },
+  { label: "Twitter", icon: twitter, href: "" },
+  {
+    label: "Instagram",
+    icon: instagram,
+    href: "https://www.instagram.com/evervale_official?igsh=MXY2YjB1aHd6emJlaQ%3D%3D",
+  },
+  {
+    label: "LinkedIn",
+    icon: linkedin,
+    href: "https://www.linkedin.com/company/evervale/",
+  },
+];
 
 const footerColumns = [
   {
@@ -48,8 +68,28 @@ export default function Footer() {
           <div className="flex flex-col items-center gap-6 lg:items-start">
             <Logo />
             <div className="text-pr_w/80">
-              <p>+352 662 345 456</p>
+              <p>+357 978 162 42</p>
               <p>info@evervale.org</p>
+            </div>
+            <div className="flex gap-6 justify-center lg:justify-start">
+              {socials
+                .filter((s) => s.href)
+                .map((social) => (
+                  <a
+                    key={social.label}
+                    href={social.href}
+                    className="flex h-6 w-6 items-center justify-center"
+                    aria-label={social.label}
+                  >
+                    <Image
+                      src={social.icon}
+                      alt={social.label}
+                      width={20}
+                      height={20}
+                      className="h-6 w-6 filter brightness-0 invert"
+                    />
+                  </a>
+                ))}
             </div>
           </div>
 

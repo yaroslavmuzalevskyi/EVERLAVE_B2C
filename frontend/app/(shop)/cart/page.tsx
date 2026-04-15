@@ -9,7 +9,13 @@ import {
   updateCartItem,
   clearCart,
 } from "@/services/cart";
-import { checkout } from "@/services/orders";
+import {
+  checkout,
+  fetchDeliveryCountries,
+  fetchDeliveryOptions,
+  DeliveryCountry,
+  DeliveryOption,
+} from "@/services/orders";
 import { formatPrice } from "@/services/products";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -35,6 +41,9 @@ const initialAddress: AddressState = {
   phone: "",
 };
 
+const selectClass =
+  "w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none bg-white disabled:opacity-60 disabled:cursor-not-allowed";
+
 export default function CartPage() {
   const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
   const router = useRouter();
@@ -47,11 +56,14 @@ export default function CartPage() {
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [address, setAddress] = useState<AddressState>(initialAddress);
 
+  const [deliveryCountries, setDeliveryCountries] = useState<DeliveryCountry[]>([]);
+  const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([]);
+  const [selectedDeliveryOptionId, setSelectedDeliveryOptionId] = useState("");
+  const [loadingOptions, setLoadingOptions] = useState(false);
+
   const loadCart = async (options?: { showSpinner?: boolean }) => {
     const showSpinner = options?.showSpinner ?? true;
-    if (showSpinner) {
-      setLoading(true);
-    }
+    if (showSpinner) setLoading(true);
     setError("");
     try {
       const data = await fetchCart();
@@ -59,15 +71,29 @@ export default function CartPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load cart");
     } finally {
-      if (showSpinner) {
-        setLoading(false);
-      }
+      if (showSpinner) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadCart();
+    fetchDeliveryCountries().then(setDeliveryCountries);
   }, []);
+
+  const handleCountryChange = async (countryCode: string) => {
+    setAddress((prev) => ({ ...prev, country: countryCode }));
+    setSelectedDeliveryOptionId("");
+    setDeliveryOptions([]);
+    if (!countryCode) return;
+    setLoadingOptions(true);
+    try {
+      const options = await fetchDeliveryOptions(countryCode);
+      setDeliveryOptions(options);
+      if (options.length === 1) setSelectedDeliveryOptionId(options[0].id);
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
 
   const handleQtyChange = async (itemId: string, qty: number) => {
     if (qty < 1) return;
@@ -109,6 +135,8 @@ export default function CartPage() {
   const handleAddressChange = (field: keyof AddressState, value: string) => {
     setAddress((prev) => ({ ...prev, [field]: value }));
   };
+
+  const selectedOption = deliveryOptions.find((o) => o.id === selectedDeliveryOptionId);
 
   const handleCheckout = async () => {
     setCheckoutError("");
@@ -318,6 +346,17 @@ export default function CartPage() {
                 </span>
               </div>
 
+              {selectedOption ? (
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span>Shipping</span>
+                  <span className="font-semibold">
+                    {selectedOption.passesFreeDeliveryThreshold
+                      ? "Free"
+                      : formatPrice(selectedOption.priceCents, selectedOption.currency)}
+                  </span>
+                </div>
+              ) : null}
+
               <div className="mt-6 border-t border-pr_dg/10 pt-5">
                 <p className="text-sm font-semibold">Delivery address</p>
                 <div className="mt-3 space-y-3 text-xs">
@@ -368,15 +407,20 @@ export default function CartPage() {
                       className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
                     />
                   </div>
-                  <input
-                    type="text"
+
+                  <select
                     value={address.country}
-                    onChange={(event) =>
-                      handleAddressChange("country", event.target.value)
-                    }
-                    placeholder="Country"
-                    className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
-                  />
+                    onChange={(e) => handleCountryChange(e.target.value)}
+                    className={selectClass}
+                  >
+                    <option value="">Select country</option>
+                    {deliveryCountries.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+
                   <input
                     type="text"
                     value={address.phone}
@@ -388,6 +432,48 @@ export default function CartPage() {
                   />
                 </div>
               </div>
+
+              {address.country ? (
+                <div className="mt-4 border-t border-pr_dg/10 pt-4">
+                  <p className="text-sm font-semibold">Delivery method</p>
+                  <div className="mt-3">
+                    {loadingOptions ? (
+                      <p className="text-xs text-pr_dg/60">Loading options...</p>
+                    ) : (
+                      <select
+                        value={selectedDeliveryOptionId}
+                        onChange={(e) => setSelectedDeliveryOptionId(e.target.value)}
+                        disabled={deliveryOptions.length <= 1}
+                        className={selectClass}
+                      >
+                        {deliveryOptions.length === 0 ? (
+                          <option value="">No delivery options available</option>
+                        ) : (
+                          deliveryOptions.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.displayName} —{" "}
+                              {opt.passesFreeDeliveryThreshold
+                                ? "Free"
+                                : formatPrice(opt.priceCents, opt.currency)}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    )}
+
+                    {selectedOption?.supportsFreeDelivery && !selectedOption.passesFreeDeliveryThreshold ? (
+                      <p className="mt-2 text-xs text-pr_dg/60">
+                        Free shipping from{" "}
+                        {formatPrice(selectedOption.freeShippingThresholdCents, selectedOption.currency)}
+                      </p>
+                    ) : selectedOption?.passesFreeDeliveryThreshold ? (
+                      <p className="mt-2 text-xs text-green-600 font-medium">
+                        Free shipping applied!
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
 
               {checkoutError ? (
                 <p className="mt-3 text-xs text-pr_dr">{checkoutError}</p>
