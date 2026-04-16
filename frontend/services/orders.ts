@@ -80,7 +80,7 @@ export async function checkout(address: OrderAddress, deliveryOptionId?: string)
       ...(address.line2 ? { line2: address.line2 } : {}),
       ...(address.phone ? { phone: address.phone } : {}),
     },
-    ...(deliveryOptionId ? { deliveryOptionId } : {}),
+    ...(deliveryOptionId ? { shippingRateId: deliveryOptionId } : {}),
   };
 
   const response = await apiFetch("/checkout", {

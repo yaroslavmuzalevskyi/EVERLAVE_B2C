@@ -360,6 +360,18 @@ export default function CartPage() {
                 </div>
               ) : null}
 
+              {selectedOption ? (
+                <div className="mt-3 flex items-center justify-between border-t border-pr_dg/10 pt-3 text-sm">
+                  <span className="font-semibold">Total</span>
+                  <span className="font-semibold">
+                    {formatPrice(
+                      cart.subtotalCents + (selectedOption.passesFreeDeliveryThreshold ? 0 : selectedOption.priceCents),
+                      selectedOption.currency,
+                    )}
+                  </span>
+                </div>
+              ) : null}
+
               <div className="mt-6 border-t border-pr_dg/10 pt-5">
                 <p className="text-sm font-semibold">Delivery address</p>
                 <div className="mt-3 space-y-3 text-xs">
