@@ -42,7 +42,7 @@ const initialAddress: AddressState = {
 };
 
 const selectClass =
-  "w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none bg-white disabled:opacity-60 disabled:cursor-not-allowed";
+  "w-full rounded-full border border-pr_dg/30 px-4 pr-8 py-2 text-sm text-pr_dg outline-none bg-white disabled:opacity-60 disabled:cursor-not-allowed appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 20 20%22%3E%3Cpath stroke=%22%236b7280%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%221.5%22 d=%22m6 8 4 4 4-4%22/%3E%3C/svg%3E')] bg-[right_0.5rem_center] bg-[length:1.25rem] bg-no-repeat";
 
 export default function CartPage() {
   const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
@@ -90,6 +90,7 @@ export default function CartPage() {
       const options = await fetchDeliveryOptions(countryCode);
       setDeliveryOptions(options);
       if (options.length === 1) setSelectedDeliveryOptionId(options[0].id);
+      // if >1 options, leave empty so user must pick
     } finally {
       setLoadingOptions(false);
     }
@@ -137,6 +138,9 @@ export default function CartPage() {
   };
 
   const selectedOption = deliveryOptions.find((o) => o.id === selectedDeliveryOptionId);
+  const selectedOptionIsFree = selectedOption?.supportsFreeDelivery === true &&
+    selectedOption.freeShippingThresholdCents !== null &&
+    (cart?.subtotalCents ?? 0) >= selectedOption.freeShippingThresholdCents;
 
   const handleCheckout = async () => {
     setCheckoutError("");
@@ -353,7 +357,7 @@ export default function CartPage() {
                 <div className="mt-2 flex items-center justify-between text-sm">
                   <span>Shipping</span>
                   <span className="font-semibold">
-                    {selectedOption.passesFreeDeliveryThreshold
+                    {selectedOptionIsFree
                       ? "Free"
                       : formatPrice(selectedOption.priceCents, selectedOption.currency)}
                   </span>
@@ -365,7 +369,7 @@ export default function CartPage() {
                   <span className="font-semibold">Total</span>
                   <span className="font-semibold">
                     {formatPrice(
-                      cart.subtotalCents + (selectedOption.passesFreeDeliveryThreshold ? 0 : selectedOption.priceCents),
+                      cart.subtotalCents + (selectedOptionIsFree ? 0 : selectedOption.priceCents),
                       selectedOption.currency,
                     )}
                   </span>
@@ -458,27 +462,35 @@ export default function CartPage() {
                       <select
                         value={selectedDeliveryOptionId}
                         onChange={(e) => setSelectedDeliveryOptionId(e.target.value)}
-                        disabled={deliveryOptions.length <= 1}
+                        disabled={deliveryOptions.length === 0}
                         className={selectClass}
                       >
                         {deliveryOptions.length === 0 ? (
                           <option value="">No delivery options available</option>
                         ) : (
-                          deliveryOptions.map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                              {opt.displayName} —{" "}
-                              {opt.passesFreeDeliveryThreshold
-                                ? "Free"
-                                : formatPrice(opt.priceCents, opt.currency)}
-                            </option>
-                          ))
+                          <>
+                            {deliveryOptions.length > 1 && !selectedDeliveryOptionId && (
+                              <option value="">Choose delivery method</option>
+                            )}
+                            {deliveryOptions.map((opt) => {
+                              const isFree = opt.supportsFreeDelivery &&
+                                opt.freeShippingThresholdCents !== null &&
+                                cart.subtotalCents >= opt.freeShippingThresholdCents;
+                              return (
+                                <option key={opt.id} value={opt.id}>
+                                  {opt.displayName} —{" "}
+                                  {isFree ? "Free" : formatPrice(opt.priceCents, opt.currency)}
+                                </option>
+                              );
+                            })}
+                          </>
                         )}
                       </select>
                     )}
 
                     {selectedOption?.supportsFreeDelivery &&
                     selectedOption.freeShippingThresholdCents !== null &&
-                    !selectedOption.passesFreeDeliveryThreshold ? (
+                    !selectedOptionIsFree ? (
                       <p className="mt-2 rounded-xl bg-pr_dg/5 px-3 py-2 text-xs text-pr_dg/70">
                         Add{" "}
                         <span className="font-semibold text-pr_dg">
@@ -489,7 +501,7 @@ export default function CartPage() {
                         </span>{" "}
                         more for free shipping
                       </p>
-                    ) : selectedOption?.passesFreeDeliveryThreshold ? (
+                    ) : selectedOptionIsFree ? (
                       <p className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-xs font-medium text-green-700">
                         You&apos;ve got free delivery!
                       </p>
