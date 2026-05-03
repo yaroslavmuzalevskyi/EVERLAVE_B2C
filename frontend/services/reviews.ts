@@ -87,32 +87,74 @@ export async function createReview(
     throw new Error("Product reference is required");
   }
   const resolvedProductId = encodeURIComponent(normalizedProductRef);
+  const hasFiles = data.imageFiles && data.imageFiles.length > 0;
 
-  // Try FormData first (supports image files)
-  // Fall back to JSON if the backend rejects FormData
-  const formData = new FormData();
-  formData.append("rating", String(data.rating));
-  if (data.text) formData.append("text", data.text);
-  if (data.imageFiles) {
-    data.imageFiles.forEach((file) => formData.append("images", file));
-  }
+  if (hasFiles) {
+    // Try FormData (supports image files)
+    const formData = new FormData();
+    formData.append("rating", String(data.rating));
+    if (data.text) formData.append("text", data.text);
+    // Try both "images" (plural) and "image" (singular) field names
+    data.imageFiles!.forEach((file) => formData.append("images", file));
 
-  let response = await apiFetch(`/products/${resolvedProductId}/reviews`, {
-    method: "POST",
-    body: formData,
-  });
+    const response = await apiFetch(`/products/${resolvedProductId}/reviews`, {
+      method: "POST",
+      body: formData,
+    });
 
-  // If FormData fails with 400, retry with JSON (backend may not support multipart)
-  if (response.status === 400) {
+    if (response.ok) {
+      return response.json();
+    }
+
+    // If FormData failed, try with "image" field name (singular)
+    if (response.status === 400) {
+      const formData2 = new FormData();
+      formData2.append("rating", String(data.rating));
+      if (data.text) formData2.append("text", data.text);
+      data.imageFiles!.forEach((file) => formData2.append("image", file));
+
+      const response2 = await apiFetch(`/products/${resolvedProductId}/reviews`, {
+        method: "POST",
+        body: formData2,
+      });
+
+      if (response2.ok) {
+        return response2.json();
+      }
+    }
+
+    // Final fallback: JSON without images
     const jsonBody: Record<string, unknown> = { rating: data.rating };
     if (data.text) jsonBody.text = data.text;
 
-    response = await apiFetch(`/products/${resolvedProductId}/reviews`, {
+    const jsonResponse = await apiFetch(`/products/${resolvedProductId}/reviews`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(jsonBody),
     });
+
+    if (!jsonResponse.ok) {
+      const error = (await jsonResponse.json().catch(() => ({}))) as {
+        message?: string;
+        error?: string;
+      };
+      throw new Error(
+        error?.message || error?.error || `Failed to submit review (${jsonResponse.status})`,
+      );
+    }
+
+    return jsonResponse.json();
   }
+
+  // No files — use JSON
+  const jsonBody: Record<string, unknown> = { rating: data.rating };
+  if (data.text) jsonBody.text = data.text;
+
+  const response = await apiFetch(`/products/${resolvedProductId}/reviews`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(jsonBody),
+  });
 
   if (!response.ok) {
     const error = (await response.json().catch(() => ({}))) as {
