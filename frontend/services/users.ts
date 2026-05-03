@@ -41,6 +41,20 @@ async function readApiError(response: Response) {
   };
 }
 
+export async function fetchMyProfile() {
+  const response = await apiFetch("/users/me");
+  if (!response.ok) {
+    const error = await readApiError(response);
+    throw new Error(error.message || "Failed to fetch profile");
+  }
+  const data = (await response.json()) as { name?: string; email?: string; role?: string };
+  return {
+    name: typeof data.name === "string" ? data.name : "",
+    email: typeof data.email === "string" ? data.email : "",
+    role: typeof data.role === "string" ? data.role : "",
+  };
+}
+
 export async function updateMyName(name: string) {
   const trimmedName = name.trim();
   if (trimmedName.length < 2 || trimmedName.length > 100) {

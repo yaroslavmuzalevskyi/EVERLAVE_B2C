@@ -16,7 +16,7 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const load = async (p: number, q: string) => {
     setLoading(true);
@@ -109,7 +109,7 @@ export default function AdminProductsPage() {
                   </td>
                   <td className="py-3 pr-4">
                     <Link
-                      href={`/admin/products/${product.id}`}
+                      href={`/admin/products/edit?id=${product.id}`}
                       className="font-medium hover:underline"
                     >
                       {product.name}
@@ -134,7 +134,7 @@ export default function AdminProductsPage() {
                   <td className="py-3">
                     <div className="flex gap-2">
                       <Link
-                        href={`/admin/products/${product.id}`}
+                        href={`/admin/products/edit?id=${product.id}`}
                         className="rounded-full border border-pr_w/20 px-3 py-1 text-xs hover:bg-pr_w/5"
                       >
                         Edit

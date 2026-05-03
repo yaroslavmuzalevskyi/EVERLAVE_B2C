@@ -22,6 +22,7 @@ import {
   setStoredProfileEmail,
   setStoredProfileName,
 } from "@/lib/userProfile";
+import { fetchMyProfile } from "@/services/users";
 
 type AuthContextValue = {
   accessToken: string | null;
@@ -359,6 +360,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       applyTokens(tokens);
       setStoredProfileEmail(normalizedEmail);
+      fetchMyProfile()
+        .then((profile) => {
+          if (profile.name) setStoredProfileName(profile.name);
+          if (profile.email) setStoredProfileEmail(profile.email);
+        })
+        .catch(() => {});
       await syncLegacyGuestCartToApi();
     },
     [applyTokens],

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   fetchAdminProduct,
   updateAdminProduct,
@@ -12,7 +12,8 @@ import {
 import { formatPrice } from "@/services/products";
 
 export default function AdminProductEditPage() {
-  const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -101,6 +102,10 @@ export default function AdminProductEditPage() {
       setError(err instanceof Error ? err.message : "Failed to delete image");
     }
   };
+
+  if (!id) {
+    return <p className="text-sm text-pr_dr">No product ID provided</p>;
+  }
 
   if (loading) {
     return <p className="text-sm text-pr_w/60">Loading product...</p>;

@@ -41,7 +41,7 @@ export default function AdminProductNewPage() {
         isActive,
         categorySlug: categorySlug.trim() || undefined,
       });
-      router.push(`/admin/products/${product.id}`);
+      router.push(`/admin/products/edit?id=${product.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create product");
     } finally {
