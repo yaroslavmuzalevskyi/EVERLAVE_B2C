@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import RequireAuth from "@/components/auth/RequireAuth";
 import Logo from "@/components/ui/Logo";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const navItems = [
   { label: "Products", href: "/admin/products" },
@@ -11,6 +12,21 @@ const navItems = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { isAdmin, isInitializing } = useAuth();
+
+  if (!isInitializing && !isAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-pr_dg text-pr_w">
+        <div className="text-center">
+          <p className="text-xl font-semibold">Access Denied</p>
+          <p className="mt-2 text-sm text-pr_w/60">You do not have admin privileges.</p>
+          <Link href="/" className="mt-4 inline-block text-sm text-pr_lg hover:underline">
+            Back to site
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <RequireAuth>

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import Logo from "@/components/ui/Logo";
 import { SectionSlider } from "@/components/navigation/SectionSlider";
 import { SectionTab } from "@/types/navigation";
-import { Menu, X, ShoppingCart, User } from "lucide-react";
+import { Menu, X, ShoppingCart, User, Shield } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -27,7 +27,7 @@ const Header = () => {
   const [mobileMenuMounted, setMobileMenuMounted] = useState(false);
   const [cartPulse, setCartPulse] = useState(false);
   const pathname = usePathname();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -74,6 +74,15 @@ const Header = () => {
             <Logo />
             <SectionSlider tabs={tabs} activeId={activeId} />
             <div className="flex items-center gap-3">
+              {isAdmin ? (
+                <Link
+                  href="/admin/products"
+                  className="flex h-10 w-16 items-center justify-center rounded-full bg-pr_lg text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_lg/90 active:translate-y-0"
+                  aria-label="Admin panel"
+                >
+                  <Shield className="h-4 w-4" />
+                </Link>
+              ) : null}
               <Link
                 href="/cart"
                 className={cn(
@@ -164,6 +173,16 @@ const Header = () => {
                   />
                 </div>
                 <div className="flex items-stretch gap-2 max-[537px]:w-full">
+                  {isAdmin ? (
+                    <Link
+                      href="/admin/products"
+                      className="flex h-full w-[100px] items-center justify-center rounded-full bg-pr_lg text-pr_dg shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pr_lg/90 active:translate-y-0 max-[537px]:h-10 max-[537px]:flex-1 max-[537px]:w-auto"
+                      aria-label="Admin panel"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Shield className="h-4 w-4" />
+                    </Link>
+                  ) : null}
                   <Link
                     href="/cart"
                     className={cn(

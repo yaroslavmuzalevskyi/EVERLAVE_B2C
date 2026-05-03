@@ -26,6 +26,7 @@ import {
 type AuthContextValue = {
   accessToken: string | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   isInitializing: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
@@ -75,6 +76,18 @@ function isLikelyExpiredAccessToken(token: string) {
   const expiryMs = getJwtExpiryMs(token);
   if (!expiryMs) return false;
   return expiryMs <= Date.now() + ACCESS_TOKEN_EXPIRY_SKEW_MS;
+}
+
+function getJwtRole(token: string): string | null {
+  const payload = token.split(".")[1];
+  if (!payload) return null;
+  try {
+    const decoded = decodeBase64Url(payload);
+    const parsed = JSON.parse(decoded) as { role?: string };
+    return typeof parsed.role === "string" ? parsed.role : null;
+  } catch {
+    return null;
+  }
 }
 
 function readSessionLastSeenAt() {
@@ -410,16 +423,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router]);
 
+  const isAdmin = useMemo(() => {
+    if (DISABLE_AUTH) return true;
+    if (!accessToken) return false;
+    return getJwtRole(accessToken) === "ADMIN";
+  }, [accessToken]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       accessToken,
       isAuthenticated: DISABLE_AUTH ? true : Boolean(accessToken),
+      isAdmin,
       isInitializing: DISABLE_AUTH ? false : isInitializing,
       login,
       register,
       logout,
     }),
-    [accessToken, isInitializing, login, logout, register],
+    [accessToken, isAdmin, isInitializing, login, logout, register],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
