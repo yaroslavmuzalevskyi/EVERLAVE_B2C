@@ -22,7 +22,7 @@ import {
   setStoredProfileEmail,
   setStoredProfileName,
 } from "@/lib/userProfile";
-import { fetchMyProfile } from "@/services/users";
+import { apiFetch } from "@/lib/apiClient";
 
 type AuthContextValue = {
   accessToken: string | null;
@@ -360,12 +360,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       applyTokens(tokens);
       setStoredProfileEmail(normalizedEmail);
-      fetchMyProfile()
-        .then((profile) => {
-          if (profile.name) setStoredProfileName(profile.name);
-          if (profile.email) setStoredProfileEmail(profile.email);
-        })
-        .catch(() => {});
       await syncLegacyGuestCartToApi();
     },
     [applyTokens],
@@ -430,23 +424,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router]);
 
-  const isAdmin = useMemo(() => {
-    if (DISABLE_AUTH) return true;
-    if (!accessToken) return false;
-    return getJwtRole(accessToken) === "ADMIN";
+  const [isAdminState, setIsAdminState] = useState(false);
+
+  useEffect(() => {
+    if (DISABLE_AUTH) {
+      setIsAdminState(true);
+      return;
+    }
+    if (!accessToken) {
+      setIsAdminState(false);
+      return;
+    }
+    // Check JWT role first
+    const jwtRole = getJwtRole(accessToken);
+    if (jwtRole === "ADMIN") {
+      setIsAdminState(true);
+      return;
+    }
+    // Probe admin API as fallback
+    apiFetch("/admin/products?limit=1")
+      .then((res) => setIsAdminState(res.ok))
+      .catch(() => setIsAdminState(false));
   }, [accessToken]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       accessToken,
       isAuthenticated: DISABLE_AUTH ? true : Boolean(accessToken),
-      isAdmin,
+      isAdmin: isAdminState,
       isInitializing: DISABLE_AUTH ? false : isInitializing,
       login,
       register,
       logout,
     }),
-    [accessToken, isAdmin, isInitializing, login, logout, register],
+    [accessToken, isAdminState, isInitializing, login, logout, register],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

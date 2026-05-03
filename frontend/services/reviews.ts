@@ -86,6 +86,8 @@ export async function createReview(
   }
   const resolvedProductId = encodeURIComponent(normalizedProductRef);
 
+  // Try FormData first (supports image files)
+  // Fall back to JSON if the backend rejects FormData
   const formData = new FormData();
   formData.append("rating", String(data.rating));
   if (data.text) formData.append("text", data.text);
@@ -93,10 +95,22 @@ export async function createReview(
     data.imageFiles.forEach((file) => formData.append("images", file));
   }
 
-  const response = await apiFetch(`/products/${resolvedProductId}/reviews`, {
+  let response = await apiFetch(`/products/${resolvedProductId}/reviews`, {
     method: "POST",
     body: formData,
   });
+
+  // If FormData fails with 400, retry with JSON (backend may not support multipart)
+  if (response.status === 400) {
+    const jsonBody: Record<string, unknown> = { rating: data.rating };
+    if (data.text) jsonBody.text = data.text;
+
+    response = await apiFetch(`/products/${resolvedProductId}/reviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(jsonBody),
+    });
+  }
 
   if (!response.ok) {
     const error = (await response.json().catch(() => ({}))) as {

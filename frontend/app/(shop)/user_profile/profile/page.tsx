@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import RequireAuth from "@/components/auth/RequireAuth";
 import UserHeader from "@/components/userProfile/UserHeader";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -9,9 +9,8 @@ import {
   getStoredProfileEmail,
   getStoredProfileName,
   setStoredProfileName,
-  setStoredProfileEmail,
 } from "@/lib/userProfile";
-import { fetchMyProfile, updateMyName, updateMyPassword } from "@/services/users";
+import { updateMyName, updateMyPassword } from "@/services/users";
 
 const DEFAULT_NAME = "";
 const DEFAULT_EMAIL = "";
@@ -21,22 +20,7 @@ export default function ProfilePage() {
   const [name, setName] = useState(
     () => getStoredProfileName() || DEFAULT_NAME,
   );
-  const [email, setEmail] = useState(() => getStoredProfileEmail() || DEFAULT_EMAIL);
-
-  useEffect(() => {
-    fetchMyProfile()
-      .then((profile) => {
-        if (profile.name) {
-          setName(profile.name);
-          setStoredProfileName(profile.name);
-        }
-        if (profile.email) {
-          setEmail(profile.email);
-          setStoredProfileEmail(profile.email);
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const [email] = useState(() => getStoredProfileEmail() || DEFAULT_EMAIL);
   const [nameLoading, setNameLoading] = useState(false);
   const [nameError, setNameError] = useState("");
   const [nameSuccess, setNameSuccess] = useState("");
