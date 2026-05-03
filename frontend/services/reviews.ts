@@ -78,17 +78,24 @@ export async function fetchReviewSummary(productId: string) {
 
 export async function createReview(
   productId: string,
-  data: { rating: number; text?: string; images?: string[] },
+  data: { rating: number; text?: string; imageFiles?: File[] },
 ) {
   const normalizedProductRef = normalizeProductRef(productId);
   if (!normalizedProductRef) {
     throw new Error("Product reference is required");
   }
   const resolvedProductId = encodeURIComponent(normalizedProductRef);
+
+  const formData = new FormData();
+  formData.append("rating", String(data.rating));
+  if (data.text) formData.append("text", data.text);
+  if (data.imageFiles) {
+    data.imageFiles.forEach((file) => formData.append("images", file));
+  }
+
   const response = await apiFetch(`/products/${resolvedProductId}/reviews`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: formData,
   });
 
   if (!response.ok) {

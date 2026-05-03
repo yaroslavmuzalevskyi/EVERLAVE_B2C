@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef } from "react";
 import Modal from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
 
@@ -11,8 +11,8 @@ type ReviewFormModalProps = {
   onRatingChange: (value: number) => void;
   text: string;
   onTextChange: (value: string) => void;
-  images: string[];
-  onImagesChange: (images: string[]) => void;
+  imageFiles: File[];
+  onImageFilesChange: (files: File[]) => void;
   onSubmit: () => void;
   loading?: boolean;
   error?: string;
@@ -25,23 +25,24 @@ export default function ReviewFormModal({
   onRatingChange,
   text,
   onTextChange,
-  images,
-  onImagesChange,
+  imageFiles,
+  onImageFilesChange,
   onSubmit,
   loading,
   error,
 }: ReviewFormModalProps) {
-  const [urlInput, setUrlInput] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAddImage = () => {
-    const trimmed = urlInput.trim();
-    if (!trimmed) return;
-    onImagesChange([...images, trimmed].slice(0, 5));
-    setUrlInput("");
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    const newFiles = [...imageFiles, ...Array.from(files)].slice(0, 5);
+    onImageFilesChange(newFiles);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleRemove = (index: number) => {
-    onImagesChange(images.filter((_, idx) => idx !== index));
+    onImageFilesChange(imageFiles.filter((_, idx) => idx !== index));
   };
 
   return (
@@ -78,31 +79,28 @@ export default function ReviewFormModal({
 
         <div>
           <p className="text-sm font-semibold">Share a photo</p>
-          <div className="mt-3 rounded-2xl border border-dashed border-pr_dg/40 p-4 text-sm text-pr_dg/60">
-            Click here to upload your image (paste URL below)
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <input
-              value={urlInput}
-              onChange={(event) => setUrlInput(event.target.value)}
-              placeholder="Image URL"
-              className="flex-1 rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
-            />
-            <button
-              type="button"
-              onClick={handleAddImage}
-              className="rounded-full bg-pr_dg px-4 py-2 text-sm font-semibold text-pr_w"
-            >
-              Add
-            </button>
-          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="mt-3 w-full rounded-2xl border border-dashed border-pr_dg/40 p-4 text-sm text-pr_dg/60 hover:border-pr_dg/60 transition"
+          >
+            Click here to upload your image ({imageFiles.length}/5)
+          </button>
 
-          {images.length > 0 ? (
+          {imageFiles.length > 0 ? (
             <div className="mt-4 grid grid-cols-3 gap-3">
-              {images.map((image, index) => (
-                <div key={`${image}-${index}`} className="relative">
+              {imageFiles.map((file, index) => (
+                <div key={`${file.name}-${index}`} className="relative">
                   <img
-                    src={image}
+                    src={URL.createObjectURL(file)}
                     alt=""
                     className="h-20 w-full rounded-xl object-cover"
                   />
