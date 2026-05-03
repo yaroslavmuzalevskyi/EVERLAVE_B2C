@@ -72,7 +72,7 @@ export default function ReviewsSection({ productId }: ReviewsSectionProps) {
       createdAt: string;
       isMine?: boolean;
       user: { name: string };
-      images?: { url: string }[];
+      images?: { url: string | null; resolvedUrl?: string }[];
     }>
   >([]);
   const [page, setPage] = useState(1);
@@ -335,7 +335,7 @@ export default function ReviewsSection({ productId }: ReviewsSectionProps) {
                   name={review.user?.name ?? "Anonymous"}
                   rating={review.rating}
                   text={review.text ?? "No review text."}
-                  images={review.images?.map((image) => image.url) ?? []}
+                  images={review.images?.map((image) => image.resolvedUrl || image.url || "").filter(Boolean) ?? []}
                   createdAt={review.createdAt}
                   isMine={review.isMine}
                   onDelete={review.id ? () => handleDelete(review.id) : undefined}
@@ -344,7 +344,7 @@ export default function ReviewsSection({ productId }: ReviewsSectionProps) {
                       name: review.user?.name ?? "Anonymous",
                       rating: review.rating,
                       text: review.text ?? "No review text.",
-                      images: review.images?.map((image) => image.url) ?? [],
+                      images: review.images?.map((image) => image.resolvedUrl || image.url || "").filter(Boolean) ?? [],
                       createdAt: review.createdAt,
                     });
                     setIsReviewModalOpen(true);

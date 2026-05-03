@@ -1,7 +1,9 @@
 import { apiFetch } from "@/lib/apiClient";
 
 export type ReviewImage = {
-  url: string;
+  url: string | null;
+  s3Key?: string | null;
+  resolvedUrl?: string;
 };
 
 export type ReviewUser = {
