@@ -2,10 +2,8 @@ import SeedDetailPage from "../../seeds/[slug]/page";
 import { fetchAllProducts } from "@/services/products";
 
 type ProductDetailProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
-
-export const dynamicParams = false;
 
 export async function generateStaticParams() {
   try {
@@ -19,6 +17,7 @@ export async function generateStaticParams() {
   }
 }
 
-export default function ProductDetailPage({ params }: ProductDetailProps) {
-  return <SeedDetailPage params={{ slug: params.id }} />;
+export default async function ProductDetailPage({ params }: ProductDetailProps) {
+  const { id } = await params;
+  return <SeedDetailPage params={{ slug: id }} />;
 }
