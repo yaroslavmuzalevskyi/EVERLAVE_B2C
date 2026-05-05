@@ -29,24 +29,18 @@ const mockReviews = [
     text: "Second time ordering from this store. Consistent quality, clear product information, and fast order processing.",
     createdAt: "2026-02-10T10:00:00Z",
     user: { name: "Alex M." },
-    images: [
-      { url: "https://picsum.photos/seed/review-1/300" },
-      { url: "https://picsum.photos/seed/review-2/300" },
-    ],
   },
   {
     rating: 3,
     text: "Product is okay and arrived on time. Nothing negative, but nothing outstanding either.",
     createdAt: "2026-02-05T12:00:00Z",
     user: { name: "Chris T." },
-    images: [{ url: "https://picsum.photos/seed/review-3/300" }],
   },
   {
     rating: 4,
     text: "Reliable shop with good communication. Packaging was discreet and secure. Overall a smooth experience.",
     createdAt: "2026-02-01T09:00:00Z",
     user: { name: "Daniel S." },
-    images: [],
   },
 ];
 
@@ -69,7 +63,6 @@ export default function ReviewsSection({ productId }: ReviewsSectionProps) {
       createdAt: string;
       isMine?: boolean;
       user: { name: string };
-      images?: { url: string | null; resolvedUrl?: string }[];
     }>
   >([]);
   const [page, setPage] = useState(1);
@@ -133,7 +126,16 @@ export default function ReviewsSection({ productId }: ReviewsSectionProps) {
         } else {
           setSummary(summaryData);
         }
-        setReviews(reviewsData.items);
+        setReviews(
+          reviewsData.items.map((review) => ({
+            id: review.id,
+            rating: review.rating,
+            text: review.text,
+            createdAt: review.createdAt,
+            isMine: review.isMine,
+            user: review.user,
+          })),
+        );
         setTotal(reviewsData.total);
       } catch {
         if (!isMounted) return;
@@ -189,7 +191,16 @@ export default function ReviewsSection({ productId }: ReviewsSectionProps) {
       } else {
         setSummary(summaryData);
       }
-      setReviews(reviewsData.items);
+      setReviews(
+        reviewsData.items.map((review) => ({
+          id: review.id,
+          rating: review.rating,
+          text: review.text,
+          createdAt: review.createdAt,
+          isMine: review.isMine,
+          user: review.user,
+        })),
+      );
       setTotal(reviewsData.total);
       setIsFormModalOpen(false);
     } catch (error) {
@@ -213,7 +224,16 @@ export default function ReviewsSection({ productId }: ReviewsSectionProps) {
         fetchReviews(productId, 1, 3),
       ]);
       setSummary(summaryData);
-      setReviews(reviewsData.items);
+      setReviews(
+        reviewsData.items.map((review) => ({
+          id: review.id,
+          rating: review.rating,
+          text: review.text,
+          createdAt: review.createdAt,
+          isMine: review.isMine,
+          user: review.user,
+        })),
+      );
       setTotal(reviewsData.total);
     } catch (error) {
       setFormError(

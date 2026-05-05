@@ -54,15 +54,21 @@ export default function AdminProductEditPage() {
     setError("");
     setSuccess("");
     try {
+      const normalizedPriceCents = Number.isFinite(priceCents)
+        ? Math.max(0, Math.trunc(priceCents))
+        : 0;
+      const normalizedStockQty = Number.isFinite(stockQty)
+        ? Math.max(0, Math.trunc(stockQty))
+        : 0;
+
       await updateAdminProduct(id, {
-        name,
-        priceCents,
-        stockQty,
+        name: name.trim(),
+        priceCents: normalizedPriceCents,
+        stockQty: normalizedStockQty,
         isActive,
         content: {
-          ...(product?.content ?? {}),
-          description,
-          subtitle,
+          description: description.trim(),
+          subtitle: subtitle.trim(),
         },
       });
       // Re-fetch to verify the backend actually persisted the changes
@@ -77,12 +83,12 @@ export default function AdminProductEditPage() {
 
       // Check if the changes were actually saved
       const savedAsExpected =
-        fresh.name === name &&
-        fresh.priceCents === priceCents &&
-        fresh.stockQty === stockQty &&
+        fresh.name === name.trim() &&
+        fresh.priceCents === normalizedPriceCents &&
+        fresh.stockQty === normalizedStockQty &&
         fresh.isActive === isActive &&
-        (fresh.content?.description ?? "") === description &&
-        (fresh.content?.subtitle ?? "") === subtitle;
+        (fresh.content?.description ?? "") === description.trim() &&
+        (fresh.content?.subtitle ?? "") === subtitle.trim();
 
       if (savedAsExpected) {
         setSuccess(
