@@ -86,7 +86,7 @@ export default async function NewProducts() {
               hoverInfo={product.hoverInfo}
               productId={product.productId}
               purchaseOptions={product.purchaseOptions}
-              href={product.slug ? `/products/${product.slug}` : undefined}
+              href={product.slug ? `/seeds/${product.slug}` : undefined}
               badgeLabel="New"
               badgeClassName="bg-pr_dg text-pr_w"
             />

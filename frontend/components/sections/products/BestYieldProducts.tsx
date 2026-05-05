@@ -127,7 +127,7 @@ export default async function BestYieldProducts() {
               imageUrl={product.imageUrl}
               productId={product.productId}
               purchaseOptions={product.purchaseOptions}
-              href={product.slug ? `/products/${product.slug}` : undefined}
+              href={product.slug ? `/seeds/${product.slug}` : undefined}
               badgeLabel="Best Yield"
               badgeClassName="bg-pr_y text-pr_dg"
             />

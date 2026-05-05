@@ -311,7 +311,7 @@ export default async function BestByMetricsProducts() {
               hoverInfo={product.hoverInfo}
               productId={product.productId}
               purchaseOptions={product.purchaseOptions}
-              href={product.slug ? `/products/${product.slug}` : undefined}
+              href={product.slug ? `/seeds/${product.slug}` : undefined}
               badgeLabel={product.badgeLabel}
               badgeClassName="bg-pr_y text-pr_dg"
             />

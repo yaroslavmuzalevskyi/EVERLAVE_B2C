@@ -37,7 +37,7 @@ export default function ProductCard({
   purchaseOptions,
 }: NewProductCardProps) {
   const resolvedHref =
-    href ?? (productId ? `/products/${productId}` : undefined);
+    href ?? (productId ? `/seeds/${productId}` : undefined);
 
   const hasHoverInfo = Boolean(hoverInfo?.length);
   const [isTouchDevice, setIsTouchDevice] = useState(false);

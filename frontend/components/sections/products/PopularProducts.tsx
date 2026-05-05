@@ -89,7 +89,7 @@ export default async function PopularProducts() {
               hoverInfo={product.hoverInfo}
               productId={product.productId}
               purchaseOptions={product.purchaseOptions}
-              href={product.slug ? `/products/${product.slug}` : undefined}
+              href={product.slug ? `/seeds/${product.slug}` : undefined}
               badgeLabel="Popular"
               badgeClassName="bg-pr_dg text-pr_w"
             />
