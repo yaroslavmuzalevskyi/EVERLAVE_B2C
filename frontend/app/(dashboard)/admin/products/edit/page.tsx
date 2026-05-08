@@ -7,6 +7,7 @@ import {
   updateAdminProduct,
   uploadProductImage,
   deleteProductImage,
+  updateProductImage,
   createProductPacks,
   updateProductPack,
   AdminProduct,
@@ -58,6 +59,8 @@ export default function AdminProductEditPage() {
   const [description, setDescription] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [genBalance, setGenBalance] = useState("");
+  const [indicaPct, setIndicaPct] = useState<number | "">("");
+  const [sativaPct, setSativaPct] = useState<number | "">("");
   const [effectsText, setEffectsText] = useState("");
 
   const [packs, setPacks] = useState<PackDraft[]>([]);
@@ -74,6 +77,16 @@ export default function AdminProductEditPage() {
     setDescription(p.content?.description ?? "");
     setSubtitle(p.content?.subtitle ?? "");
     setGenBalance(p.content?.gen_balance_desk ?? "");
+    setIndicaPct(
+      typeof p.content?.geneticBalance?.indica === "number"
+        ? p.content.geneticBalance.indica
+        : "",
+    );
+    setSativaPct(
+      typeof p.content?.geneticBalance?.sativa === "number"
+        ? p.content.geneticBalance.sativa
+        : "",
+    );
     setEffectsText((p.content?.effects ?? []).join(", "));
     setPacks(
       (p.packs ?? []).map((pack) => ({
@@ -122,6 +135,23 @@ export default function AdminProductEditPage() {
         .map((s) => s.trim())
         .filter(Boolean);
 
+      const indicaNum =
+        typeof indicaPct === "number" && Number.isFinite(indicaPct)
+          ? Math.max(0, Math.min(100, indicaPct))
+          : undefined;
+      const sativaNum =
+        typeof sativaPct === "number" && Number.isFinite(sativaPct)
+          ? Math.max(0, Math.min(100, sativaPct))
+          : undefined;
+      const geneticBalance =
+        indicaNum !== undefined || sativaNum !== undefined
+          ? {
+              ...(product.content?.geneticBalance ?? {}),
+              ...(indicaNum !== undefined ? { indica: indicaNum } : {}),
+              ...(sativaNum !== undefined ? { sativa: sativaNum } : {}),
+            }
+          : product.content?.geneticBalance;
+
       await updateAdminProduct(id, {
         name: name.trim(),
         priceCents: normalizedPriceCents,
@@ -133,6 +163,7 @@ export default function AdminProductEditPage() {
           description: description.trim(),
           gen_balance_desk: genBalance.trim(),
           effects,
+          ...(geneticBalance ? { geneticBalance } : {}),
         },
       });
       const fresh = await reload();
@@ -172,6 +203,16 @@ export default function AdminProductEditPage() {
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleImageSortOrderChange = async (imageId: string, sortOrder: number) => {
+    if (!id) return;
+    try {
+      await updateProductImage(id, imageId, { sortOrder });
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update image order");
     }
   };
 
@@ -337,7 +378,7 @@ export default function AdminProductEditPage() {
             />
           </div>
           <div>
-            <label className="text-xs text-pr_w/50">Genetic balance</label>
+            <label className="text-xs text-pr_w/50">Genetic balance description</label>
             <input
               type="text"
               value={genBalance}
@@ -345,6 +386,38 @@ export default function AdminProductEditPage() {
               placeholder="e.g. 60/40"
               className={inputClass}
             />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-pr_w/50">Indica %</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={indicaPct}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setIndicaPct(raw === "" ? "" : Number(raw));
+                }}
+                placeholder="60"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-pr_w/50">Sativa %</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={sativaPct}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setSativaPct(raw === "" ? "" : Number(raw));
+                }}
+                placeholder="40"
+                className={inputClass}
+              />
+            </div>
           </div>
           <div>
             <label className="text-xs text-pr_w/50">Effects (comma-separated)</label>
@@ -356,31 +429,6 @@ export default function AdminProductEditPage() {
               className={inputClass}
             />
           </div>
-          <div className="flex items-center gap-3">
-            <label className="text-xs text-pr_w/50">Active</label>
-            <button
-              type="button"
-              onClick={() => setIsActive(!isActive)}
-              className={`h-6 w-11 rounded-full transition ${
-                isActive ? "bg-green-500" : "bg-pr_w/20"
-              }`}
-            >
-              <span
-                className={`block h-5 w-5 rounded-full bg-white transition ${
-                  isActive ? "translate-x-5.5" : "translate-x-0.5"
-                }`}
-              />
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-full bg-pr_lg px-6 py-2 text-sm font-semibold text-pr_dg disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Save changes"}
-          </button>
         </div>
 
         <div className="space-y-4">
@@ -416,9 +464,20 @@ export default function AdminProductEditPage() {
                 >
                   Delete
                 </button>
-                <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-xs">
-                  #{img.sortOrder}
-                </span>
+                <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs">
+                  <span className="text-pr_w/60">order</span>
+                  <input
+                    type="number"
+                    defaultValue={img.sortOrder}
+                    onBlur={(e) => {
+                      const next = Number(e.target.value);
+                      if (Number.isFinite(next) && next !== img.sortOrder) {
+                        handleImageSortOrderChange(img.id, Math.max(0, Math.trunc(next)));
+                      }
+                    }}
+                    className="w-12 rounded bg-transparent text-pr_w outline-none"
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -579,6 +638,37 @@ export default function AdminProductEditPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="mt-10 flex flex-wrap items-center gap-6 border-t border-pr_w/10 pt-6">
+        <div className="flex items-center gap-3">
+          <label className="text-xs text-pr_w/50">Active</label>
+          <button
+            type="button"
+            onClick={() => setIsActive(!isActive)}
+            className={`h-6 w-11 rounded-full transition ${
+              isActive ? "bg-green-500" : "bg-pr_w/20"
+            }`}
+          >
+            <span
+              className={`block h-5 w-5 rounded-full bg-white transition ${
+                isActive ? "translate-x-5.5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded-full bg-pr_lg px-6 py-2 text-sm font-semibold text-pr_dg disabled:opacity-60"
+        >
+          {saving ? "Saving..." : "Save changes"}
+        </button>
+
+        {error ? <span className="text-sm text-pr_dr">{error}</span> : null}
+        {success ? <span className="text-sm text-green-400">{success}</span> : null}
       </div>
     </div>
   );

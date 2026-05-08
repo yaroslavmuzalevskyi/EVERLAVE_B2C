@@ -46,6 +46,10 @@ export type AdminProduct = {
     description?: string;
     effects?: string[];
     gen_balance_desk?: string;
+    geneticBalance?: {
+      indica?: number;
+      sativa?: number;
+    };
   };
   category?: {
     id: string;
@@ -170,6 +174,23 @@ export async function uploadProductImage(productId: string, file: File, sortOrde
   if (!response.ok) {
     const err = (await response.json().catch(() => ({}))) as ApiValidationErrorPayload;
     throw new Error(buildAdminErrorMessage(err, "Failed to upload image"));
+  }
+  return response.json();
+}
+
+export async function updateProductImage(
+  productId: string,
+  imageId: string,
+  data: { sortOrder?: number },
+) {
+  const response = await apiFetch(`/admin/products/${productId}/images/${imageId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const err = (await response.json().catch(() => ({}))) as ApiValidationErrorPayload;
+    throw new Error(buildAdminErrorMessage(err, "Failed to update image"));
   }
   return response.json();
 }
