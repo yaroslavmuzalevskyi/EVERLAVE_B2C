@@ -121,11 +121,13 @@ export async function fetchAdminProduct(productId: string) {
 
 export async function createAdminProduct(data: {
   name: string;
+  slug?: string;
   content: { subtitle?: string; description?: string; effects?: string[]; gen_balance_desk?: string };
   priceCents: number;
   currency?: string;
   stockQty?: number;
   isActive?: boolean;
+  categoryId?: string;
   categorySlug?: string;
 }) {
   const response = await apiFetch("/admin/products", {

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createAdminProduct } from "@/services/admin";
+import { fetchCategories, CategoryItem } from "@/services/categories";
 
 export default function AdminProductNewPage() {
   const router = useRouter();
@@ -10,12 +11,24 @@ export default function AdminProductNewPage() {
   const [name, setName] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [description, setDescription] = useState("");
+  const [genBalance, setGenBalance] = useState("");
+  const [effectsText, setEffectsText] = useState("");
   const [priceCents, setPriceCents] = useState(0);
   const [stockQty, setStockQty] = useState(0);
   const [isActive, setIsActive] = useState(true);
-  const [categorySlug, setCategorySlug] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [categoriesError, setCategoriesError] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchCategories()
+      .then((items) => setCategories(items))
+      .catch((err) =>
+        setCategoriesError(err instanceof Error ? err.message : "Failed to load categories"),
+      );
+  }, []);
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -26,20 +39,39 @@ export default function AdminProductNewPage() {
       setError("Price must be greater than 0");
       return;
     }
+    if (!categoryId) {
+      setError("Category is required");
+      return;
+    }
+
+    const selected = categories.find((c) => (c.id ?? c.slug) === categoryId);
+    if (!selected) {
+      setError("Pick a valid category");
+      return;
+    }
 
     setSaving(true);
     setError("");
     try {
+      const effects = effectsText
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
       const product = await createAdminProduct({
         name: name.trim(),
         content: {
-          subtitle: subtitle.trim() || undefined,
-          description: description.trim() || undefined,
+          effects,
+          subtitle: subtitle.trim(),
+          description: description.trim(),
+          gen_balance_desk: genBalance.trim(),
         },
         priceCents,
         stockQty,
         isActive,
-        categorySlug: categorySlug.trim() || undefined,
+        ...(selected.id
+          ? { categoryId: selected.id }
+          : { categorySlug: selected.slug }),
       });
       router.push(`/admin/products/edit?id=${product.id}`);
     } catch (err) {
@@ -66,6 +98,9 @@ export default function AdminProductNewPage() {
       </div>
 
       {error ? <p className="mt-4 text-sm text-pr_dr">{error}</p> : null}
+      {categoriesError ? (
+        <p className="mt-4 text-sm text-pr_dr">{categoriesError}</p>
+      ) : null}
 
       <div className="mt-8 space-y-4">
         <div>
@@ -109,14 +144,21 @@ export default function AdminProductNewPage() {
           </div>
         </div>
         <div>
-          <label className="text-xs text-pr_w/50">Category slug</label>
-          <input
-            type="text"
-            value={categorySlug}
-            onChange={(e) => setCategorySlug(e.target.value)}
-            placeholder="e.g. feminized"
+          <label className="text-xs text-pr_w/50">Category *</label>
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
             className={inputClass}
-          />
+          >
+            <option value="" className="bg-pr_dg">
+              Select category…
+            </option>
+            {categories.map((c) => (
+              <option key={c.id ?? c.slug} value={c.id ?? c.slug} className="bg-pr_dg">
+                {c.name}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="text-xs text-pr_w/50">Description</label>
@@ -126,6 +168,26 @@ export default function AdminProductNewPage() {
             rows={4}
             placeholder="Product description"
             className={`${inputClass} min-h-[100px] rounded-2xl`}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-pr_w/50">Genetic balance description</label>
+          <input
+            type="text"
+            value={genBalance}
+            onChange={(e) => setGenBalance(e.target.value)}
+            placeholder="e.g. 60/40"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-pr_w/50">Effects (comma-separated)</label>
+          <input
+            type="text"
+            value={effectsText}
+            onChange={(e) => setEffectsText(e.target.value)}
+            placeholder="Relaxed, Happy"
+            className={inputClass}
           />
         </div>
         <div className="flex items-center gap-3">
