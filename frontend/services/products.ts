@@ -285,6 +285,7 @@ type RawProduct = {
   description?: string;
   shortDescription?: string;
   summary?: string;
+  subtitle?: string;
   priceCents?: number;
   price?: number | string;
   currency?: string;
@@ -441,7 +442,8 @@ function normalizeContent(raw: RawProduct) {
     raw.shortDescription ||
     raw.summary
   )?.trim();
-  const subtitle = raw.content?.subtitle?.trim() || undefined;
+  const subtitle =
+    raw.content?.subtitle?.trim() || raw.subtitle?.trim() || undefined;
   const geneticBalanceDescription =
     raw.content?.gen_balance_description?.trim() ||
     raw.content?.gen_balance_desc?.trim() ||
@@ -464,6 +466,7 @@ function normalizeContent(raw: RawProduct) {
 
   if (
     !description &&
+    !subtitle &&
     !keyFacts &&
     !normalizedSections &&
     !geneticBalanceDescription &&
