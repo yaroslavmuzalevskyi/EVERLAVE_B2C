@@ -119,7 +119,9 @@ export default function AdminProductsPage() {
                     >
                       {product.name}
                     </Link>
-                    <p className="text-xs text-pr_w/40">{product.slug}</p>
+                    <p className="text-xs text-pr_w/40">
+                      {product.subtitle || product.content?.subtitle || product.slug}
+                    </p>
                   </td>
                   <td className="py-3 pr-4">
                     {formatPrice(product.priceCents, product.currency)}
