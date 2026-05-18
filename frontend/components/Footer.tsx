@@ -45,8 +45,6 @@ const footerColumns = [
     title: "SUPPORT",
     links: [
       { label: "Help/FAQ", href: "/" },
-      { label: "Shipping & Returns", href: "/" },
-      { label: "Community", href: "/" },
     ],
   },
   {
