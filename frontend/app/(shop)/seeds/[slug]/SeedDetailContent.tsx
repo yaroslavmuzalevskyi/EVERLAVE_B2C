@@ -52,6 +52,33 @@ function splitIntoParagraphs(text?: string) {
     .filter(Boolean);
 }
 
+function renderMarkdownBlock(paragraph: string, key: string) {
+  const headingMatch = paragraph.match(/^(#{1,6})\s+(.*)$/);
+  if (headingMatch) {
+    const level = headingMatch[1].length;
+    const content = headingMatch[2];
+    const className =
+      level === 1
+        ? "mt-4 text-xl font-bold"
+        : level === 2
+          ? "mt-4 text-lg font-semibold"
+          : level === 3
+            ? "mt-3 text-base font-semibold"
+            : "mt-3 text-sm font-semibold";
+    const Tag = `h${level}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+    return (
+      <Tag key={key} className={className}>
+        {formatInlineText(content)}
+      </Tag>
+    );
+  }
+  return (
+    <p key={key} className="mt-2 whitespace-pre-line text-xs text-pr_dg/70">
+      {formatInlineText(paragraph)}
+    </p>
+  );
+}
+
 function formatInlineText(text: string) {
   const normalized = normalizeEscapedText(text);
   const pieces = normalized.split(/(\*\*[^*]+\*\*)/g);
@@ -393,14 +420,9 @@ export default function SeedDetailContent({ slug }: { slug: string }) {
                 {(section.body.length > 0
                   ? section.body
                   : splitIntoParagraphs(description)
-                ).map((paragraph, index) => (
-                  <p
-                    key={`${section.heading}-${index}`}
-                    className="mt-2 whitespace-pre-line text-xs text-pr_dg/70"
-                  >
-                    {formatInlineText(paragraph)}
-                  </p>
-                ))}
+                ).map((paragraph, index) =>
+                  renderMarkdownBlock(paragraph, `${section.heading}-${index}`),
+                )}
               </div>
             ))}
           </div>

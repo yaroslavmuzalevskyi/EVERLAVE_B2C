@@ -802,7 +802,13 @@ function FilterValuesSection({
   onDelete: (fv: AdminFilterValue) => void;
   smallInputClass: string;
 }) {
-  const selectedFilter = categoryFilters.find((f) => f.slug === newFilterSlug);
+  const usedFilterSlugs = new Set(
+    productFilterValues.map((fv) => fv.filter.slug),
+  );
+  const availableFilters = categoryFilters.filter(
+    (f) => f.type === "multi" || !usedFilterSlugs.has(f.slug),
+  );
+  const selectedFilter = availableFilters.find((f) => f.slug === newFilterSlug);
 
   return (
     <div className="mt-10">
@@ -841,7 +847,7 @@ function FilterValuesSection({
               <option value="" className="bg-pr_dg">
                 Select filter…
               </option>
-              {categoryFilters.map((f) => (
+              {availableFilters.map((f) => (
                 <option key={f.slug} value={f.slug} className="bg-pr_dg">
                   {f.name} ({f.type})
                 </option>
@@ -987,18 +993,57 @@ function FilterValueRow({
   smallInputClass: string;
 }) {
   const type = fv.filter.type;
+
+  const rangeFromValue = (() => {
+    if (typeof fv.value === "string") {
+      const matches = fv.value.match(/-?\d+(?:\.\d+)?/g);
+      if (matches && matches.length >= 2) {
+        return { min: Number(matches[0]), max: Number(matches[1]) };
+      }
+      if (matches && matches.length === 1) {
+        return { min: Number(matches[0]), max: Number(matches[0]) };
+      }
+    }
+    return undefined;
+  })();
+
+  const numberFromValue = (() => {
+    if (typeof fv.value === "number") return fv.value;
+    if (typeof fv.value === "string") {
+      const n = Number(fv.value);
+      if (Number.isFinite(n)) return n;
+    }
+    return undefined;
+  })();
+
   const [optionValue, setOptionValue] = useState(
     fv.option?.value ?? (typeof fv.value === "string" ? fv.value : ""),
   );
   const [boolValue, setBoolValue] = useState(Boolean(fv.booleanValue ?? fv.value));
   const [numberValue, setNumberValue] = useState(
-    String(fv.numberValue ?? (typeof fv.value === "number" ? fv.value : "")),
+    fv.numberValue != null
+      ? String(fv.numberValue)
+      : numberFromValue != null
+        ? String(numberFromValue)
+        : "",
   );
   const [numberMin, setNumberMin] = useState(
-    fv.numberMin != null ? String(fv.numberMin) : "",
+    fv.numberMin != null
+      ? String(fv.numberMin)
+      : fv.min != null
+        ? String(fv.min)
+        : rangeFromValue
+          ? String(rangeFromValue.min)
+          : "",
   );
   const [numberMax, setNumberMax] = useState(
-    fv.numberMax != null ? String(fv.numberMax) : "",
+    fv.numberMax != null
+      ? String(fv.numberMax)
+      : fv.max != null
+        ? String(fv.max)
+        : rangeFromValue
+          ? String(rangeFromValue.max)
+          : "",
   );
 
   const handleSave = () => {

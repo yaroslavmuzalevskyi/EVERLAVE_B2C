@@ -98,6 +98,8 @@ export type AdminFilterValue = {
   value?: string | number | boolean | null;
   numberMin?: number | null;
   numberMax?: number | null;
+  min?: number | null;
+  max?: number | null;
   booleanValue?: boolean | null;
   numberValue?: number | null;
 };
