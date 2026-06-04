@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   fetchPublicBlog,
   fetchPublicBlogs,
-  formatBlogDate,
+  formatBlogDateTime,
   formatReadTime,
   type PublicBlogBlock,
   type PublicBlogDetail,
@@ -129,7 +129,7 @@ export default function BlogDetailContent({ slug }: { slug: string }) {
     );
   }
 
-  const publishedAt = formatBlogDate(post.publishedAt);
+  const publishedAt = formatBlogDateTime(post.publishedAt);
   const readingTime = formatReadTime(post.readTime);
   const categoryName = post.category?.name;
 
@@ -184,13 +184,9 @@ export default function BlogDetailContent({ slug }: { slug: string }) {
                 <p className="text-pr_dg/60">Reading Time</p>
                 <p className="font-semibold">{readingTime || "—"}</p>
               </div>
-              <div>
-                <p className="text-pr_dg/60">Public Time</p>
+              <div className="col-span-2">
+                <p className="text-pr_dg/60">Published</p>
                 <p className="font-semibold">{publishedAt || "—"}</p>
-              </div>
-              <div>
-                <p className="text-pr_dg/60">Author</p>
-                <p className="font-semibold">Evervale</p>
               </div>
             </div>
           </div>

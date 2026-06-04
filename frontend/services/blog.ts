@@ -115,6 +115,22 @@ export function formatBlogDate(value?: string | null) {
   }
 }
 
+export function formatBlogDateTime(value?: string | null) {
+  if (!value) return "";
+  try {
+    const d = new Date(value);
+    return d.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return value;
+  }
+}
+
 export function formatReadTime(readTime?: number) {
   if (!readTime) return "";
   return `${readTime} Min`;
