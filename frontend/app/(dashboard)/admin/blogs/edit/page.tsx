@@ -317,7 +317,7 @@ export default function AdminBlogEditPage() {
       {!publishedAt ? (
         <div className="mt-4 flex flex-col gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200 sm:flex-row sm:items-center sm:justify-between">
           <span>
-            Draft — never published. Click <b>Publish now</b> to make this blog
+            Draft - never published. Click <b>Publish now</b> to make this blog
             visible on the public site.
           </span>
           <button
@@ -331,11 +331,11 @@ export default function AdminBlogEditPage() {
         </div>
       ) : isActive ? (
         <div className="mt-4 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-2 text-xs text-green-300">
-          Active — visible on /blog
+          Active - visible on /blog
         </div>
       ) : (
         <div className="mt-4 rounded-xl border border-pr_w/15 bg-pr_w/5 px-4 py-2 text-xs text-pr_w/70">
-          Inactive — hidden from /blog (previously published on{" "}
+          Inactive - hidden from /blog (previously published on{" "}
           {new Date(publishedAt).toLocaleString()})
         </div>
       )}
@@ -363,7 +363,7 @@ export default function AdminBlogEditPage() {
               className={inputClass}
             >
               <option value="" className="bg-pr_dg">
-                —
+                -
               </option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id} className="bg-pr_dg">
@@ -440,7 +440,7 @@ export default function AdminBlogEditPage() {
             className={inputClass}
           >
             <option value="" className="bg-pr_dg">
-              — none —
+              - none -
             </option>
             {images.map((img) => (
               <option key={img.id} value={img.id} className="bg-pr_dg">
@@ -594,7 +594,7 @@ export default function AdminBlogEditPage() {
               className={inputClass}
             >
               <option value="index,follow" className="bg-pr_dg">
-                index, follow (default — visible to search engines)
+                index, follow (default - visible to search engines)
               </option>
               <option value="noindex,follow" className="bg-pr_dg">
                 noindex, follow (don&apos;t index, follow links)
@@ -709,7 +709,7 @@ function BlockEditor({
             className={smallInputClass}
           >
             <option value="" className="bg-pr_dg">
-              — choose —
+              - choose -
             </option>
             {images.map((img) => (
               <option key={img.id} value={img.id} className="bg-pr_dg">
@@ -753,7 +753,7 @@ function BlockEditor({
                 className={smallInputClass}
               >
                 <option value="" className="bg-pr_dg">
-                  — choose —
+                  - choose -
                 </option>
                 {images.map((img) => (
                   <option key={img.id} value={img.id} className="bg-pr_dg">

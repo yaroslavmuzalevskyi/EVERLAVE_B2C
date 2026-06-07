@@ -831,7 +831,7 @@ export default function AdminProductEditPage() {
               className={inputClass}
             >
               <option value="index,follow" className="bg-pr_dg">
-                index, follow (default — visible to search engines)
+                index, follow (default - visible to search engines)
               </option>
               <option value="noindex,follow" className="bg-pr_dg">
                 noindex, follow (don&apos;t index, follow links)

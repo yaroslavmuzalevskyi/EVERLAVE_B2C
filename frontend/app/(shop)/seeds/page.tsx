@@ -214,20 +214,20 @@ const selectorOptionsBySlug: Record<
     { label: "Up to 700 g", min: 0, max: 700 },
   ],
   height: [
-    { label: "60–100 cm", min: 60, max: 100 },
-    { label: "60–110 cm", min: 60, max: 110 },
-    { label: "70–120 cm", min: 70, max: 120 },
+    { label: "60-100 cm", min: 60, max: 100 },
+    { label: "60-110 cm", min: 60, max: 110 },
+    { label: "70-120 cm", min: 70, max: 120 },
   ],
   cycle: [
-    { label: "9–10 weeks", min: 9, max: 10 },
-    { label: "9–11 weeks", min: 9, max: 11 },
-    { label: "10–12 weeks", min: 10, max: 12 },
+    { label: "9-10 weeks", min: 9, max: 10 },
+    { label: "9-11 weeks", min: 9, max: 11 },
+    { label: "10-12 weeks", min: 10, max: 12 },
   ],
   indica: [
-    { label: "45–65%", min: 45, max: 65 },
+    { label: "45-65%", min: 45, max: 65 },
   ],
   sativa: [
-    { label: "35–55%", min: 35, max: 55 },
+    { label: "35-55%", min: 35, max: 55 },
   ],
 };
 

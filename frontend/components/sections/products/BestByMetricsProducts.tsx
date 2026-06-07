@@ -290,7 +290,7 @@ export default function BestByMetricsProducts() {
             Top Picks by Performance
           </h2>
           <p className="mt-2 text-sm text-pr_w/70 sm:text-base">
-            Handpicked for peak THC, maximum yield, or fastest finish — our top
+            Handpicked for peak THC, maximum yield, or fastest finish - our top
             performers at a glance.
           </p>
         </div>

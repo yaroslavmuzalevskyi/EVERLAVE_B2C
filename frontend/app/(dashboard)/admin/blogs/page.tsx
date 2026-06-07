@@ -127,9 +127,9 @@ export default function AdminBlogsPage() {
                       {blog.excerpt || blog.slug}
                     </p>
                   </td>
-                  <td className="py-3 pr-4">{blog.category?.name ?? "—"}</td>
+                  <td className="py-3 pr-4">{blog.category?.name ?? "-"}</td>
                   <td className="py-3 pr-4">
-                    {blog.readTime ? `${blog.readTime} min` : "—"}
+                    {blog.readTime ? `${blog.readTime} min` : "-"}
                   </td>
                   <td className="py-3 pr-4">
                     <span

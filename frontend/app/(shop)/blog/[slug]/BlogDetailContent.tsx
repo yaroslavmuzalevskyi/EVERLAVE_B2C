@@ -194,15 +194,15 @@ export default function BlogDetailContent({ slug }: { slug: string }) {
             <div className="grid grid-cols-2 gap-x-6 gap-y-5 text-sm">
               <div>
                 <p className="text-pr_dg/60">Category</p>
-                <p className="font-semibold">{categoryName || "—"}</p>
+                <p className="font-semibold">{categoryName || "-"}</p>
               </div>
               <div>
                 <p className="text-pr_dg/60">Reading Time</p>
-                <p className="font-semibold">{readingTime || "—"}</p>
+                <p className="font-semibold">{readingTime || "-"}</p>
               </div>
               <div className="col-span-2">
                 <p className="text-pr_dg/60">Published</p>
-                <p className="font-semibold">{publishedAt || "—"}</p>
+                <p className="font-semibold">{publishedAt || "-"}</p>
               </div>
             </div>
           </div>

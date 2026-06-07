@@ -478,7 +478,7 @@ export default function CartPage() {
                                 cart.subtotalCents >= opt.freeShippingThresholdCents;
                               return (
                                 <option key={opt.id} value={opt.id}>
-                                  {opt.displayName} —{" "}
+                                  {opt.displayName} -{" "}
                                   {isFree ? "Free" : formatPrice(opt.priceCents, opt.currency)}
                                 </option>
                               );
