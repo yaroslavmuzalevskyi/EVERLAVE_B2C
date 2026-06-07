@@ -111,7 +111,7 @@ export default function BlogDetailContent({ slug }: { slug: string }) {
           title: post.seoMetadata?.title || post.title,
           description: post.seoMetadata?.description || post.excerpt,
           keywords: post.seoMetadata?.keywords,
-          robots: post.seoMetadata?.robots,
+          robots: post.seoMetadata?.robots || "index,follow",
           ogTitle: post.seoMetadata?.ogTitle,
           ogDescription: post.seoMetadata?.ogDescription,
           ogImage: post.seoMetadata?.ogImage || post.mainImage?.url,

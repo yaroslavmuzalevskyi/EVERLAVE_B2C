@@ -117,11 +117,18 @@ export type AdminFilterValue = {
     type: "select" | "multi" | "boolean" | "number" | "range" | string;
   };
   option?: { id: string; value: string } | null;
-  value?: string | number | boolean | null;
+  value?:
+    | string
+    | number
+    | boolean
+    | { min?: number | null; max?: number | null }
+    | Array<number>
+    | null;
   numberMin?: number | null;
   numberMax?: number | null;
   min?: number | null;
   max?: number | null;
+  range?: { min?: number | null; max?: number | null } | null;
   booleanValue?: boolean | null;
   numberValue?: number | null;
 };

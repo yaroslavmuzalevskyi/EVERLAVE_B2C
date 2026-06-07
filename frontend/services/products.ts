@@ -325,6 +325,7 @@ type RawProduct = {
   reviewCount?: number;
   reviews?: number;
   filters?: Record<string, string>;
+  seoMetadata?: ProductSeoMetadata;
   createdAt?: string;
   updatedAt?: string;
   metricValue?: number | string;
@@ -635,6 +636,7 @@ function normalizeProduct(raw: RawProduct): ProductDetails {
     ratingAvg: raw.ratingAvg ?? raw.rating,
     reviewCount: raw.reviewCount ?? raw.reviews,
     filters: raw.filters ?? undefined,
+    seoMetadata: raw.seoMetadata,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };

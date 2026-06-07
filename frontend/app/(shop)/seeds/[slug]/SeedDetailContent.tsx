@@ -213,7 +213,7 @@ export default function SeedDetailContent({ slug }: { slug: string }) {
           description:
             product.seoMetadata?.description || product.content?.subtitle,
           keywords: product.seoMetadata?.keywords,
-          robots: product.seoMetadata?.robots,
+          robots: product.seoMetadata?.robots || "index,follow",
           ogTitle: product.seoMetadata?.ogTitle,
           ogDescription: product.seoMetadata?.ogDescription,
           ogImage:

@@ -1128,6 +1128,31 @@ function FilterValueRow({
   const type = fv.filter.type;
 
   const rangeFromValue = (() => {
+    if (fv.range && typeof fv.range === "object") {
+      const min = fv.range.min;
+      const max = fv.range.max;
+      if (min != null || max != null) {
+        return { min: Number(min ?? max), max: Number(max ?? min) };
+      }
+    }
+    if (
+      fv.value &&
+      typeof fv.value === "object" &&
+      !Array.isArray(fv.value)
+    ) {
+      const obj = fv.value as { min?: number | null; max?: number | null };
+      if (obj.min != null || obj.max != null) {
+        return {
+          min: Number(obj.min ?? obj.max),
+          max: Number(obj.max ?? obj.min),
+        };
+      }
+    }
+    if (Array.isArray(fv.value) && fv.value.length >= 1) {
+      const min = Number(fv.value[0]);
+      const max = Number(fv.value[1] ?? fv.value[0]);
+      if (Number.isFinite(min)) return { min, max };
+    }
     if (typeof fv.value === "string") {
       const matches = fv.value.match(/-?\d+(?:\.\d+)?/g);
       if (matches && matches.length >= 2) {
