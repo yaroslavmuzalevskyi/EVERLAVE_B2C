@@ -51,7 +51,7 @@ export default function AdminBlogsPage() {
 
   const handleToggleActive = async (blog: AdminBlog) => {
     try {
-      await updateAdminBlog(blog.id, { publish: !blog.isActive });
+      await updateAdminBlog(blog.id, { isActive: !blog.isActive });
       load(page, search);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update blog");

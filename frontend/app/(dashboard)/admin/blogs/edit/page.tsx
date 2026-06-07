@@ -152,7 +152,7 @@ export default function AdminBlogEditPage() {
         readTime: Number.isFinite(readTime)
           ? Math.max(0, Math.trunc(readTime))
           : 0,
-        publish: isActive,
+        isActive,
         mainImageId: mainImageId ?? null,
         content: sanitizedContent,
         seoMetadata: {
