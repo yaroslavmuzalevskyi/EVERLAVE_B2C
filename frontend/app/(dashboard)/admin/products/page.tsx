@@ -48,14 +48,20 @@ export default function AdminProductsPage() {
 
   const handleToggleActive = async (product: AdminProduct) => {
     try {
-      if (product.isActive) {
-        await deleteAdminProduct(product.id);
-      } else {
-        await updateAdminProduct(product.id, { isActive: true });
-      }
+      await updateAdminProduct(product.id, { isActive: !product.isActive });
       load(page, search);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update product");
+    }
+  };
+
+  const handleArchive = async (product: AdminProduct) => {
+    if (!window.confirm(`Archive product "${product.name}"?`)) return;
+    try {
+      await deleteAdminProduct(product.id);
+      load(page, search);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to archive product");
     }
   };
 
@@ -130,33 +136,50 @@ export default function AdminProductsPage() {
                   <td className="py-3 pr-4">
                     <span
                       className={`rounded-full px-2 py-1 text-xs ${
-                        product.isActive
-                          ? "bg-green-900/30 text-green-400"
-                          : "bg-red-900/30 text-red-400"
+                        product.isArchived
+                          ? "bg-red-500/20 text-red-300"
+                          : product.isActive
+                            ? "bg-green-900/30 text-green-400"
+                            : "bg-pr_w/10 text-pr_w/60"
                       }`}
                     >
-                      {product.isActive ? "Active" : "Inactive"}
+                      {product.isArchived
+                        ? "Archived"
+                        : product.isActive
+                          ? "Active"
+                          : "Inactive"}
                     </span>
                   </td>
                   <td className="py-3">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Link
                         href={`/admin/products/edit?id=${product.id}`}
                         className="rounded-full border border-pr_w/20 px-3 py-1 text-xs hover:bg-pr_w/5"
                       >
                         Edit
                       </Link>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(product)}
-                        className={`rounded-full border px-3 py-1 text-xs ${
-                          product.isActive
-                            ? "border-red-500/30 text-red-400 hover:bg-red-500/10"
-                            : "border-green-500/30 text-green-400 hover:bg-green-500/10"
-                        }`}
-                      >
-                        {product.isActive ? "Deactivate" : "Activate"}
-                      </button>
+                      {!product.isArchived ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleActive(product)}
+                            className={`rounded-full border px-3 py-1 text-xs ${
+                              product.isActive
+                                ? "border-pr_w/20 text-pr_w hover:bg-pr_w/10"
+                                : "border-green-500/30 text-green-400 hover:bg-green-500/10"
+                            }`}
+                          >
+                            {product.isActive ? "Deactivate" : "Activate"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleArchive(product)}
+                            className="rounded-full border border-red-500/30 px-3 py-1 text-xs text-red-400 hover:bg-red-500/10"
+                          >
+                            Archive
+                          </button>
+                        </>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

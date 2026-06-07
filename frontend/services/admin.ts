@@ -58,6 +58,7 @@ export type AdminProduct = {
   currency: string;
   stockQty: number;
   isActive: boolean;
+  isArchived?: boolean;
   seoMetadata?: AdminProductSeoMetadata;
   createdAt: string;
   updatedAt: string;
