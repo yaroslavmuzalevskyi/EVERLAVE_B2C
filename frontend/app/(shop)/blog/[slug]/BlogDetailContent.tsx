@@ -159,6 +159,13 @@ export default function BlogDetailContent({ slug }: { slug: string }) {
           {categoryName ? `/ ${categoryName} ` : ""}/ {post.title}
         </p>
 
+        {post.draft ? (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-red-600/90 px-4 py-1.5 text-xs font-semibold text-white">
+            <span className="h-2 w-2 rounded-full bg-white" />
+            Draft - visible to admins only
+          </div>
+        ) : null}
+
         <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">
           {post.title}
         </h1>
@@ -235,6 +242,11 @@ export default function BlogDetailContent({ slug }: { slug: string }) {
                           : undefined
                       }
                     >
+                      {item.draft ? (
+                        <span className="absolute left-4 top-4 rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white">
+                          Draft
+                        </span>
+                      ) : null}
                       {item.category?.name ? (
                         <span className="absolute right-4 top-4 rounded-full bg-sr_dg px-4 py-2 text-xs font-semibold text-pr_w">
                           {item.category.name}

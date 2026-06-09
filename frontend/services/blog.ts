@@ -1,7 +1,4 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  "https://backend.evervale.org";
+import { apiFetch } from "@/lib/apiClient";
 
 export type PublicBlogCategory = {
   slug: string;
@@ -47,6 +44,7 @@ export type PublicBlogListItem = {
   category?: PublicBlogCategory;
   mainImage?: { url: string; alt?: string | null } | null;
   readTime?: number;
+  draft?: boolean;
 };
 
 export type PublicBlogDetail = PublicBlogListItem & {
@@ -61,7 +59,7 @@ export type PublicBlogsResponse = {
 };
 
 export async function fetchPublicBlogCategories(): Promise<PublicBlogCategory[]> {
-  const response = await fetch(`${API_BASE_URL}/blog-categories`);
+  const response = await apiFetch(`/blog-categories`);
   if (!response.ok) return [];
   const data = (await response.json()) as PublicBlogCategory[];
   return Array.isArray(data) ? data : [];
@@ -76,7 +74,7 @@ export async function fetchPublicBlogs(params?: {
   search.set("page", String(params?.page ?? 1));
   search.set("limit", String(params?.limit ?? 20));
   if (params?.category) search.set("category", params.category);
-  const response = await fetch(`${API_BASE_URL}/blogs?${search.toString()}`);
+  const response = await apiFetch(`/blogs?${search.toString()}`);
   if (!response.ok) {
     return { page: 1, limit: 20, total: 0, items: [] };
   }
@@ -96,7 +94,7 @@ export async function fetchPublicBlogs(params?: {
 }
 
 export async function fetchPublicBlog(slug: string): Promise<PublicBlogDetail | null> {
-  const response = await fetch(`${API_BASE_URL}/blogs/${slug}`);
+  const response = await apiFetch(`/blogs/${slug}`);
   if (!response.ok) return null;
   return (await response.json()) as PublicBlogDetail;
 }
