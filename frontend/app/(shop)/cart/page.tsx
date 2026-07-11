@@ -10,14 +10,19 @@ import {
   clearCart,
 } from "@/services/cart";
 import {
+  API_ERROR_CODES,
   checkout,
+  fetchCurrentPayment,
   fetchDeliveryCountries,
   fetchDeliveryOptions,
   DeliveryCountry,
   DeliveryOption,
+  OpenPayment,
+  OrdersApiError,
 } from "@/services/orders";
 import { formatPrice } from "@/services/products";
 import { useAuth } from "@/components/auth/AuthProvider";
+import PaymentModal from "@/components/orders/PaymentModal";
 
 type CartState = Awaited<ReturnType<typeof fetchCart>>;
 
@@ -55,6 +60,7 @@ export default function CartPage() {
   const [checkoutError, setCheckoutError] = useState("");
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [address, setAddress] = useState<AddressState>(initialAddress);
+  const [activePayment, setActivePayment] = useState<OpenPayment | null>(null);
 
   const [deliveryCountries, setDeliveryCountries] = useState<DeliveryCountry[]>([]);
   const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([]);
@@ -182,14 +188,34 @@ export default function CartPage() {
       );
 
       setAddress(initialAddress);
+      // The cart is cleared server-side on order creation — just refresh it.
       await loadCart();
-      if (result.url) {
-        window.location.href = result.url;
-      } else {
-        router.push("/user_profile/orders");
-      }
+      setActivePayment(result);
     } catch (err) {
-      setCheckoutError(err instanceof Error ? err.message : "Checkout failed");
+      if (
+        err instanceof OrdersApiError &&
+        err.code === API_ERROR_CODES.OPEN_PAYMENT_EXISTS
+      ) {
+        // An unpaid order already exists: re-open its payment instead of
+        // surfacing an error or creating a second order.
+        try {
+          const existing = await fetchCurrentPayment();
+          if (existing) {
+            setActivePayment(existing);
+          } else {
+            // Already under review (or gone) — nothing to upload here.
+            router.push("/user_profile/orders");
+          }
+        } catch {
+          setCheckoutError(
+            "You already have an unpaid order. Please check your orders page.",
+          );
+        }
+      } else {
+        setCheckoutError(
+          err instanceof Error ? err.message : "Checkout failed",
+        );
+      }
     } finally {
       setCheckoutLoading(false);
     }
@@ -536,6 +562,16 @@ export default function CartPage() {
           </div>
         )}
       </section>
+
+      <PaymentModal
+        payment={activePayment}
+        isOpen={activePayment !== null}
+        onClose={() => setActivePayment(null)}
+        onUpdated={() => {
+          // Proof uploaded or order cancelled — refresh cart state.
+          loadCart({ showSpinner: false });
+        }}
+      />
     </div>
   );
 }

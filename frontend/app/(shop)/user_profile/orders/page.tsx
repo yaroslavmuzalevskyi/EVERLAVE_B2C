@@ -1,150 +1,109 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import OrderCard from "@/components/orders/OrderCard";
+import PaymentModal from "@/components/orders/PaymentModal";
 import RequireAuth from "@/components/auth/RequireAuth";
 import UserHeader from "@/components/userProfile/UserHeader";
-import { fetchOrders, Order, resumeCheckout } from "@/services/orders";
-import { formatPrice } from "@/services/products";
+import {
+  Order,
+  OpenPayment,
+  cancelOrder,
+  fetchCurrentPayment,
+  fetchOrders,
+} from "@/services/orders";
 import { getStoredProfileName } from "@/lib/userProfile";
-
-const fallbackOrders = [
-  {
-    orderId: "CNG-87654",
-    product: "CBD Isolate 99%",
-    price: "€56.32",
-    quantity: "2 pieces",
-    total: "€112.64",
-    statusDate: "Shipped 28 of January",
-    statusLabel: "Delivery",
-  },
-  {
-    orderId: "FDP-45987",
-    product: "Lemon Haze Cannabis Flo...",
-    price: "€18.00",
-    quantity: "3 pieces",
-    total: "€54.00",
-    statusDate: "Shipped 24 of January",
-    statusLabel: "Delivery",
-  },
-];
-
-type DisplayOrder = (typeof fallbackOrders)[number] & {
-  rawStatus?: string;
-};
 
 type FilterKey = "delivered" | "arrived" | "canceled" | "all";
 
-const statusLabelMap: Record<string, string> = {
-  PENDING: "Processing",
-  PAID: "Paid",
-  SHIPPED: "Delivery",
-  DELIVERED: "Delivery",
-  COMPLETED: "Completed",
-  CANCELLED: "Canceled",
-  REFUNDED: "Refunded",
-};
-
-const toDateLabel = (label: string, value?: string | null) => {
-  if (!value) return label;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return label;
-  return `${label} ${date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  })}`;
-};
-
-const buildDisplayOrder = (order: Order): DisplayOrder => {
-  const totalQty = order.items.reduce((sum, item) => sum + item.qty, 0);
-  const firstItem = order.items[0];
-  const product =
-    order.items.length > 1
-      ? `${firstItem?.productName ?? "Order"} + ${order.items.length - 1} more`
-      : firstItem?.productName ?? "Order";
-  const statusLabel = statusLabelMap[order.status] ?? order.status;
-  const statusDate =
-    order.status === "SHIPPED"
-      ? toDateLabel("Shipped", order.shippedAt)
-      : order.status === "DELIVERED"
-        ? toDateLabel("Delivered", order.deliveredAt)
-        : order.status === "COMPLETED"
-          ? toDateLabel("Completed", order.completedAt)
-          : statusLabel;
-
-  return {
-    orderId: order.id,
-    product,
-    price: firstItem
-      ? formatPrice(firstItem.unitPriceCents, order.currency)
-      : formatPrice(order.totalAmountCents, order.currency),
-    quantity: `${totalQty} pieces`,
-    total: formatPrice(order.totalAmountCents, order.currency),
-    statusDate,
-    statusLabel,
-    rawStatus: order.status,
-  };
-};
+const PAGE_SIZE = 16;
 
 export default function OrdersPage() {
   const [userName] = useState(
     () => getStoredProfileName() || "Stephan Macroski",
   );
-  const [orders, setOrders] = useState<DisplayOrder[]>(fallbackOrders);
-  const [rawOrders, setRawOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
-  const [resumingOrderId, setResumingOrderId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [resumingOrderNumber, setResumingOrderNumber] = useState<
+    number | null
+  >(null);
+  const [cancellingOrderNumber, setCancellingOrderNumber] = useState<
+    number | null
+  >(null);
+  const [activePayment, setActivePayment] = useState<OpenPayment | null>(null);
 
-  const handleResumePayment = async (orderId: string) => {
-    setResumingOrderId(orderId);
+  const loadOrders = useCallback(async (targetPage: number) => {
+    setLoading(true);
+    setError("");
     try {
-      const result = await resumeCheckout(orderId);
-      if (result.url) {
-        window.location.href = result.url;
-      }
-    } catch {
-      // silently fail — user can retry
+      const response = await fetchOrders({ page: targetPage, limit: PAGE_SIZE });
+      setOrders(response.items);
+      setTotal(response.total);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load orders");
+      setOrders([]);
+      setTotal(0);
     } finally {
-      setResumingOrderId(null);
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOrders(page);
+  }, [page, loadOrders]);
+
+  const handleResumePayment = async (orderNumber: number) => {
+    setNotice("");
+    setResumingOrderNumber(orderNumber);
+    try {
+      const current = await fetchCurrentPayment();
+      if (current) {
+        setActivePayment(current);
+      } else {
+        // No PENDING payment left — it's already under review or gone.
+        setNotice(
+          "This payment has already been submitted and is under review.",
+        );
+        await loadOrders(page);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load payment details",
+      );
+    } finally {
+      setResumingOrderNumber(null);
     }
   };
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadOrders = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const response = await fetchOrders({ page: 1, limit: 16 });
-        if (!isMounted) return;
-        setRawOrders(response.items);
-        setOrders(response.items.map(buildDisplayOrder));
-      } catch (err) {
-        if (!isMounted) return;
-        setError(err instanceof Error ? err.message : "Failed to load orders");
-        setOrders(fallbackOrders);
-        setRawOrders([]);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    loadOrders();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const handleCancelOrder = async (orderNumber: number) => {
+    if (
+      !window.confirm(
+        `Cancel order #${orderNumber}? This action cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setNotice("");
+    setCancellingOrderNumber(orderNumber);
+    try {
+      await cancelOrder(orderNumber);
+      await loadOrders(page);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to cancel the order",
+      );
+    } finally {
+      setCancellingOrderNumber(null);
+    }
+  };
 
   const statusCounts = useMemo(() => {
-    if (!rawOrders.length) {
-      return { delivered: 0, arrived: 0, canceled: 0 };
-    }
-    return rawOrders.reduce(
+    return orders.reduce(
       (acc, order) => {
         if (["DELIVERED", "COMPLETED"].includes(order.status)) {
           acc.delivered += 1;
@@ -159,11 +118,9 @@ export default function OrdersPage() {
       },
       { delivered: 0, arrived: 0, canceled: 0 },
     );
-  }, [rawOrders]);
+  }, [orders]);
 
   const filteredOrders = useMemo(() => {
-    if (!rawOrders.length) return orders;
-
     const apply = (order: Order) => {
       if (filter === "delivered")
         return ["DELIVERED", "COMPLETED"].includes(order.status);
@@ -172,9 +129,10 @@ export default function OrdersPage() {
         return ["CANCELLED", "REFUNDED"].includes(order.status);
       return true;
     };
+    return orders.filter(apply);
+  }, [filter, orders]);
 
-    return rawOrders.filter(apply).map(buildDisplayOrder);
-  }, [filter, rawOrders, orders]);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <RequireAuth>
@@ -184,7 +142,7 @@ export default function OrdersPage() {
             <UserHeader activeTab="orders" userName={userName} />
 
             <div className="mt-4 grid gap-6 lg:grid-cols-[260px_1fr]">
-              <div className="flex flex-col gap-3 rounded-2xl bg-pr_w p-4">
+              <div className="flex flex-col gap-3 rounded-2xl bg-pr_w p-4 h-fit">
                 <button
                   type="button"
                   onClick={() => setFilter("delivered")}
@@ -227,11 +185,17 @@ export default function OrdersPage() {
                       : "border border-pr_dg/30 text-pr_dg"
                   }`}
                 >
-                  All <span>{rawOrders.length || orders.length}</span>
+                  All <span>{total || orders.length}</span>
                 </button>
               </div>
 
               <div className="flex flex-col gap-6">
+                {notice ? (
+                  <div className="rounded-2xl bg-pr_w p-4 text-sm text-pr_dg/80">
+                    {notice}
+                  </div>
+                ) : null}
+
                 {loading ? (
                   <div className="rounded-2xl bg-pr_w p-6 text-sm text-pr_dg/70">
                     Loading orders...
@@ -243,10 +207,12 @@ export default function OrdersPage() {
                 ) : filteredOrders.length > 0 ? (
                   filteredOrders.map((order) => (
                     <OrderCard
-                      key={order.orderId}
-                      {...order}
+                      key={order.orderNumber}
+                      order={order}
                       onResumePayment={handleResumePayment}
-                      resuming={resumingOrderId === order.orderId}
+                      onCancel={handleCancelOrder}
+                      resuming={resumingOrderNumber === order.orderNumber}
+                      cancelling={cancellingOrderNumber === order.orderNumber}
                     />
                   ))
                 ) : (
@@ -254,10 +220,45 @@ export default function OrdersPage() {
                     No orders found.
                   </div>
                 )}
+
+                {totalPages > 1 ? (
+                  <div className="flex items-center justify-center gap-4 pb-6">
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page <= 1 || loading}
+                      className="rounded-full border border-pr_w/40 px-4 py-2 text-xs text-pr_w disabled:opacity-40"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs text-pr_w/80">
+                      Page {page} of {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={page >= totalPages || loading}
+                      className="rounded-full border border-pr_w/40 px-4 py-2 text-xs text-pr_w disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
         </div>
+
+        <PaymentModal
+          payment={activePayment}
+          isOpen={activePayment !== null}
+          onClose={() => setActivePayment(null)}
+          onUpdated={() => {
+            loadOrders(page);
+          }}
+        />
       </div>
     </RequireAuth>
   );
