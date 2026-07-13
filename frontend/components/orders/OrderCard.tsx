@@ -58,8 +58,10 @@ export default function OrderCard({
       : (firstItem?.productName ?? "Order");
 
   const paymentIsPending = payment?.status === PAYMENT_STATUS.PENDING;
-  // Cancellation is only allowed while unpaid (no proof submitted yet).
-  const canCancel = paymentIsPending && !proof;
+  // Cancel is forbidden once the payment is UNDER_REVIEW, so a rejected
+  // proof (PENDING with a proof present) is still cancellable.
+  const canCancel = paymentIsPending;
+  const proofRejected = paymentIsPending && Boolean(proof);
 
   const createdLabel = formatDate(order.createdAt);
   const shippedLabel = formatDate(tracking?.shippedAt);
@@ -67,6 +69,27 @@ export default function OrderCard({
 
   return (
     <div className="w-full rounded-2xl bg-pr_w px-6 py-5 text-pr_dg shadow-sm">
+      {proofRejected ? (
+        <div className="mb-4 rounded-xl border border-pr_dr/40 bg-pr_dr/5 px-4 py-3 text-xs text-pr_dg">
+          <p className="font-semibold text-pr_dr">
+            Previous proof of payment was rejected
+          </p>
+          <p className="mt-1">
+            {proof?.reviewNote?.trim()
+              ? proof.reviewNote
+              : "Please upload a valid proof of payment to continue."}
+          </p>
+          {proof?.originalName ? (
+            <p className="mt-1 text-pr_dg/60">
+              Rejected file: {proof.originalName}
+              {formatDate(proof.createdAt)
+                ? ` (${formatDate(proof.createdAt)})`
+                : ""}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs text-pr_dg/60">Order number</p>
@@ -95,7 +118,11 @@ export default function OrderCard({
               disabled={resuming || cancelling}
               className="rounded-full bg-pr_dg px-4 py-2 text-xs text-pr_w disabled:opacity-60"
             >
-              {resuming ? "Loading..." : "Complete payment"}
+              {resuming
+                ? "Loading..."
+                : proofRejected
+                  ? "Upload new proof"
+                  : "Complete payment"}
             </button>
           ) : null}
           {canCancel && onCancel ? (

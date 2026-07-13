@@ -80,6 +80,10 @@ export type OrdersResponse = {
 /**
  * Shape returned by POST /checkout and by
  * GET /orders/current-payment (under the `currentPayment` key).
+ *
+ * `payment.proof` is only present when a previous proof was uploaded
+ * and rejected — its presence together with `payment.status === "PENDING"`
+ * means the customer must re-upload.
  */
 export type OpenPayment = {
   orderNumber: number;
@@ -91,8 +95,22 @@ export type OpenPayment = {
     status: string;
     reference: string;
     bankAccount: BankAccount;
+    proof?: PaymentProof | null;
   };
 };
+
+/** Order statuses accepted by the `GET /orders?status=…` filter. */
+export const ORDER_STATUSES = [
+  "PENDING",
+  "PAID",
+  "SHIPPED",
+  "DELIVERED",
+  "COMPLETED",
+  "CANCELLED",
+  "REFUNDED",
+] as const;
+
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 export type ProofUploadResult = {
   orderNumber: number;
@@ -190,17 +208,27 @@ export function validateProofFile(file: File): string | null {
 export async function fetchOrders(params: {
   page: number;
   limit: number;
-  status?: string;
+  /** Comma-joined status list, or an array — both accepted by the API. */
+  status?: string | OrderStatus[];
+  /** Free-text search; the API matches order number. */
+  search?: string;
 }) {
-  const search = new URLSearchParams({
+  const query = new URLSearchParams({
     page: String(params.page),
     limit: String(params.limit),
   });
+
   if (params.status) {
-    search.set("status", params.status);
+    const joined = Array.isArray(params.status)
+      ? params.status.join(",")
+      : params.status;
+    if (joined) query.set("status", joined);
+  }
+  if (params.search && params.search.trim()) {
+    query.set("search", params.search.trim());
   }
 
-  const response = await apiFetch(`/orders?${search.toString()}`);
+  const response = await apiFetch(`/orders?${query.toString()}`);
   if (!response.ok) {
     throw await toApiError(response, "Failed to load orders");
   }

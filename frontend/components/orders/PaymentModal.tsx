@@ -72,6 +72,19 @@ export default function PaymentModal({
   const bank = payment.payment.bankAccount ?? {};
   const reference = payment.payment.reference;
   const isPending = payment.payment.status === PAYMENT_STATUS.PENDING;
+  const rejectedProof =
+    isPending && payment.payment.proof ? payment.payment.proof : null;
+
+  const formatRejectedDate = (value: string | null | undefined) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
   const copyToClipboard = async (value: string, field: "reference" | "iban") => {
     try {
@@ -179,11 +192,34 @@ export default function PaymentModal({
         </div>
       ) : (
         <div>
-          <h2 className="text-xl font-semibold">Complete your payment</h2>
+          <h2 className="text-xl font-semibold">
+            {rejectedProof ? "Re-upload proof of payment" : "Complete your payment"}
+          </h2>
           <p className="mt-1 text-sm text-pr_dg/70">
             Order #{payment.orderNumber} — transfer the amount below to our
             bank account, then upload your proof of payment.
           </p>
+
+          {rejectedProof ? (
+            <div className="mt-4 rounded-xl border border-pr_dr/40 bg-pr_dr/5 px-4 py-3 text-sm text-pr_dg">
+              <p className="font-semibold text-pr_dr">
+                Your previous proof of payment was rejected
+              </p>
+              <p className="mt-1 text-xs">
+                {rejectedProof.reviewNote?.trim()
+                  ? rejectedProof.reviewNote
+                  : "Please upload a valid proof of payment to continue."}
+              </p>
+              {rejectedProof.originalName ? (
+                <p className="mt-1 text-xs text-pr_dg/60">
+                  Rejected file: {rejectedProof.originalName}
+                  {formatRejectedDate(rejectedProof.createdAt)
+                    ? ` (${formatRejectedDate(rejectedProof.createdAt)})`
+                    : ""}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           {/* Single method for now; becomes a selector when more methods (e.g. crypto) are added. */}
           <div className="mt-4 flex items-center gap-2 text-sm">
