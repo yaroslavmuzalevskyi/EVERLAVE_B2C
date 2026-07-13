@@ -46,6 +46,64 @@ const initialAddress: AddressState = {
   phone: "",
 };
 
+// ISO-2 → dial code (add as needed; only used to auto-prefix a bare phone).
+const COUNTRY_DIAL_CODES: Record<string, string> = {
+  LU: "352",
+  FR: "33",
+  DE: "49",
+  BE: "32",
+  NL: "31",
+  AT: "43",
+  IT: "39",
+  ES: "34",
+  PT: "351",
+  PL: "48",
+  CZ: "420",
+  SK: "421",
+  IE: "353",
+  GB: "44",
+  DK: "45",
+  SE: "46",
+  NO: "47",
+  FI: "358",
+  CH: "41",
+  GR: "30",
+  HU: "36",
+  RO: "40",
+  BG: "359",
+  HR: "385",
+  SI: "386",
+  EE: "372",
+  LV: "371",
+  LT: "370",
+  US: "1",
+  CA: "1",
+};
+
+/**
+ * Normalize a user-entered phone into E.164 (`+<digits>`). If the user
+ * already prefixed with `+`, we trust them; otherwise we prepend the
+ * dial code for the selected country. Returns `undefined` if the phone
+ * is empty, or a normalized string.
+ */
+function normalizePhoneE164(
+  raw: string,
+  country: string,
+): string | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("+")) {
+    return "+" + trimmed.slice(1).replace(/\D/g, "");
+  }
+  const digitsOnly = trimmed.replace(/\D/g, "");
+  if (!digitsOnly) return undefined;
+  const dial = COUNTRY_DIAL_CODES[country];
+  if (!dial) return "+" + digitsOnly; // best effort
+  // Strip a leading local zero, common in many EU countries.
+  const local = digitsOnly.replace(/^0+/, "");
+  return `+${dial}${local}`;
+}
+
 const selectClass =
   "w-full rounded-full border border-pr_dg/30 px-4 pr-8 py-2 text-sm text-pr_dg outline-none bg-white disabled:opacity-60 disabled:cursor-not-allowed appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 20 20%22%3E%3Cpath stroke=%22%236b7280%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%221.5%22 d=%22m6 8 4 4 4-4%22/%3E%3C/svg%3E')] bg-[right_0.5rem_center] bg-[length:1.25rem] bg-no-repeat";
 
@@ -182,7 +240,7 @@ export default function CartPage() {
           postalCode: address.postalCode.trim(),
           country: address.country.trim(),
           line2: address.line2.trim() || undefined,
-          phone: address.phone.trim() || undefined,
+          phone: normalizePhoneE164(address.phone, address.country),
         },
         selectedDeliveryOptionId || undefined,
       );
@@ -466,15 +524,27 @@ export default function CartPage() {
                     ))}
                   </select>
 
-                  <input
-                    type="text"
-                    value={address.phone}
-                    onChange={(event) =>
-                      handleAddressChange("phone", event.target.value)
-                    }
-                    placeholder="Phone (optional)"
-                    className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
-                  />
+                  <div>
+                    <input
+                      type="tel"
+                      value={address.phone}
+                      onChange={(event) =>
+                        handleAddressChange("phone", event.target.value)
+                      }
+                      placeholder="Phone (optional, e.g. +352661954190)"
+                      className="w-full rounded-full border border-pr_dg/30 px-4 py-2 text-sm text-pr_dg outline-none"
+                    />
+                    {address.phone.trim() && !address.phone.trim().startsWith("+") ? (
+                      <p className="mt-1 px-2 text-[11px] text-pr_dg/60">
+                        Will be sent as{" "}
+                        <span className="font-mono">
+                          {normalizePhoneE164(address.phone, address.country) ??
+                            address.phone}
+                        </span>
+                        . Include a &quot;+&quot; and country code to override.
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 

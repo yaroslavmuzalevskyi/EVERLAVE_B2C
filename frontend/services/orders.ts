@@ -154,11 +154,31 @@ export class OrdersApiError extends Error {
 
 async function toApiError(response: Response, fallback: string) {
   const data = await response.json().catch(() => null);
-  return new OrdersApiError(
-    data?.message || fallback,
-    data?.code,
-    data?.details,
-  );
+  const base = data?.message || fallback;
+  const details = data?.details;
+
+  // Backend uses Zod-style { formErrors: string[], fieldErrors: {…} }.
+  // Fold both into the user-visible message so we don't hide the specific
+  // rejection reason when `fieldErrors` is empty but `formErrors` isn't.
+  const parts: string[] = [];
+  if (details && typeof details === "object") {
+    const fe = (details as { fieldErrors?: Record<string, string[]> })
+      .fieldErrors;
+    if (fe && typeof fe === "object") {
+      for (const [field, messages] of Object.entries(fe)) {
+        if (Array.isArray(messages)) {
+          for (const msg of messages) parts.push(`${field}: ${msg}`);
+        }
+      }
+    }
+    const forms = (details as { formErrors?: string[] }).formErrors;
+    if (Array.isArray(forms)) {
+      for (const msg of forms) parts.push(msg);
+    }
+  }
+  const message = parts.length > 0 ? `${base} (${parts.join("; ")})` : base;
+
+  return new OrdersApiError(message, data?.code, details);
 }
 
 // --- Proof file constraints (enforced client-side; backend re-validates) ---
