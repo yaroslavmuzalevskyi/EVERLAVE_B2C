@@ -49,12 +49,44 @@ export type BankAccount = {
   bankName?: string;
 };
 
+export type CryptoExchangeRate = {
+  base?: string | null;
+  quote?: string | null;
+  /** Decimal string, e.g. "61500.00" — never parse into a float for display. */
+  rate?: string | null;
+  source?: string | null;
+};
+
+/**
+ * Bitcoin invoice data attached to `payment.crypto` for BITCOIN orders.
+ * Present while the payment is PENDING or UNDER_REVIEW.
+ *
+ * `amountBtc` is an exact decimal string produced by the backend — display
+ * it verbatim and never round-trip it through a JS `number`.
+ */
+export type CryptoPayment = {
+  provider?: string | null;
+  network: string;
+  asset?: string | null;
+  address: string;
+  addressIndex?: number | null;
+  amountBtc: string;
+  amountSats?: number | null;
+  exchangeRate?: CryptoExchangeRate | null;
+  expiresAt?: string | null;
+  txHash?: string | null;
+  markedPaidAt?: string | null;
+  /** BIP-21 style payload for the QR code — use exactly as returned. */
+  qrPayload?: string | null;
+};
+
 export type OrderPayment = {
   method: string;
   status: string;
   reference: string | null;
   bankAccount?: BankAccount | null;
   proof?: PaymentProof | null;
+  crypto?: CryptoPayment | null;
 };
 
 export type Order = {
@@ -94,10 +126,37 @@ export type OpenPayment = {
     method: string;
     status: string;
     reference: string;
-    bankAccount: BankAccount;
+    /** Present for BANK_TRANSFER payments. */
+    bankAccount?: BankAccount | null;
     proof?: PaymentProof | null;
+    /** Present for BITCOIN payments. */
+    crypto?: CryptoPayment | null;
   };
 };
+
+/**
+ * Build an OpenPayment view from an order in the list response, e.g. to
+ * show Bitcoin payment details for an UNDER_REVIEW order (which
+ * GET /orders/current-payment no longer returns).
+ */
+export function openPaymentFromOrder(order: Order): OpenPayment | null {
+  const payment = order.payment;
+  if (!payment) return null;
+  return {
+    orderNumber: order.orderNumber,
+    orderStatus: order.status,
+    totalAmountCents: order.totalAmountCents,
+    currency: order.currency,
+    payment: {
+      method: payment.method,
+      status: payment.status,
+      reference: payment.reference ?? "",
+      bankAccount: payment.bankAccount ?? null,
+      proof: payment.proof ?? null,
+      crypto: payment.crypto ?? null,
+    },
+  };
+}
 
 /** Order statuses accepted by the `GET /orders?status=…` filter. */
 export const ORDER_STATUSES = [
@@ -120,11 +179,18 @@ export type ProofUploadResult = {
 };
 
 export const PAYMENT_METHOD_BANK_TRANSFER = "BANK_TRANSFER";
+export const PAYMENT_METHOD_BITCOIN = "BITCOIN";
+
+export type PaymentMethod =
+  | typeof PAYMENT_METHOD_BANK_TRANSFER
+  | typeof PAYMENT_METHOD_BITCOIN;
 
 export const PAYMENT_STATUS = {
   PENDING: "PENDING",
   UNDER_REVIEW: "UNDER_REVIEW",
+  CONFIRMED: "CONFIRMED",
   CANCELLED: "CANCELLED",
+  REFUNDED: "REFUNDED",
 } as const;
 
 export const API_ERROR_CODES = {
@@ -258,9 +324,10 @@ export async function fetchOrders(params: {
 export async function checkout(
   address: OrderAddress,
   deliveryOptionId?: string,
+  paymentMethod: PaymentMethod = PAYMENT_METHOD_BANK_TRANSFER,
 ) {
   const payload = {
-    paymentMethod: PAYMENT_METHOD_BANK_TRANSFER,
+    paymentMethod,
     address: {
       fullName: address.fullName,
       line1: address.line1,
@@ -320,6 +387,52 @@ export async function uploadPaymentProof(orderNumber: number, file: File) {
   }
 
   return (await response.json()) as ProofUploadResult;
+}
+
+// --- Bitcoin payment confirmation ---
+
+/** Bitcoin transaction hashes are exactly 64 hex characters. */
+export const TX_HASH_REGEX = /^[a-fA-F0-9]{64}$/;
+
+/**
+ * Validate an (optional) user-entered txHash.
+ * Returns a user-facing error message, or null when acceptable.
+ * An empty value is valid — the txHash is optional.
+ */
+export function validateTxHash(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!TX_HASH_REGEX.test(trimmed)) {
+    return "This doesn't look like a Bitcoin transaction ID. It should be 64 hexadecimal characters — or leave the field empty.";
+  }
+  return null;
+}
+
+/**
+ * Customer clicked "I paid" on a Bitcoin invoice. Sends the optional
+ * txHash only when non-empty (never an empty string). The response is the
+ * full open-payment object with `payment.status === "UNDER_REVIEW"` —
+ * callers must replace their local payment state with it.
+ */
+export async function confirmBitcoinPayment(
+  orderNumber: number,
+  txHash?: string,
+): Promise<OpenPayment> {
+  const trimmed = txHash?.trim();
+  const response = await apiFetch(
+    `/orders/${orderNumber}/payment-confirmation`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(trimmed ? { txHash: trimmed } : {}),
+    },
+  );
+
+  if (!response.ok) {
+    throw await toApiError(response, "Failed to confirm the payment");
+  }
+
+  return (await response.json()) as OpenPayment;
 }
 
 /** Cancel an unpaid order. Only valid while paymentStatus is PENDING. */

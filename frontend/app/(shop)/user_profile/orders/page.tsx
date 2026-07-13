@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import OrderCard from "@/components/orders/OrderCard";
-import PaymentModal from "@/components/orders/PaymentModal";
+import OpenPaymentModal from "@/components/orders/OpenPaymentModal";
 import RequireAuth from "@/components/auth/RequireAuth";
 import UserHeader from "@/components/userProfile/UserHeader";
 import {
@@ -14,6 +14,7 @@ import {
   cancelOrder,
   fetchCurrentPayment,
   fetchOrders,
+  openPaymentFromOrder,
 } from "@/services/orders";
 import { getStoredProfileName } from "@/lib/userProfile";
 
@@ -44,7 +45,16 @@ function parsePageParam(raw: string | null): number {
   return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 1;
 }
 
+// useSearchParams() must sit under a Suspense boundary for static prerender.
 export default function OrdersPage() {
+  return (
+    <Suspense fallback={null}>
+      <OrdersPageContent />
+    </Suspense>
+  );
+}
+
+function OrdersPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -191,6 +201,14 @@ export default function OrdersPage() {
     }
   };
 
+  // Read-only payment details (e.g. Bitcoin order under review):
+  // current-payment no longer returns it, so build the view from the
+  // order data already in the list (crypto is included by the API).
+  const handleViewPayment = (order: Order) => {
+    const view = openPaymentFromOrder(order);
+    if (view) setActivePayment(view);
+  };
+
   const handleCancelOrder = async (orderNumber: number) => {
     if (
       !window.confirm(
@@ -304,6 +322,7 @@ export default function OrdersPage() {
                       order={order}
                       onResumePayment={handleResumePayment}
                       onCancel={handleCancelOrder}
+                      onViewPayment={handleViewPayment}
                       resuming={resumingOrderNumber === order.orderNumber}
                       cancelling={cancellingOrderNumber === order.orderNumber}
                     />
@@ -359,7 +378,7 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        <PaymentModal
+        <OpenPaymentModal
           payment={activePayment}
           isOpen={activePayment !== null}
           onClose={() => setActivePayment(null)}

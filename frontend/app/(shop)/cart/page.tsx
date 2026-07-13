@@ -11,6 +11,9 @@ import {
 } from "@/services/cart";
 import {
   API_ERROR_CODES,
+  PAYMENT_METHOD_BANK_TRANSFER,
+  PAYMENT_METHOD_BITCOIN,
+  PaymentMethod,
   checkout,
   fetchCurrentPayment,
   fetchDeliveryCountries,
@@ -22,7 +25,7 @@ import {
 } from "@/services/orders";
 import { formatPrice } from "@/services/products";
 import { useAuth } from "@/components/auth/AuthProvider";
-import PaymentModal from "@/components/orders/PaymentModal";
+import OpenPaymentModal from "@/components/orders/OpenPaymentModal";
 
 type CartState = Awaited<ReturnType<typeof fetchCart>>;
 
@@ -116,8 +119,12 @@ export default function CartPage() {
   const [error, setError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
+  const [checkoutNotice, setCheckoutNotice] = useState("");
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [address, setAddress] = useState<AddressState>(initialAddress);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
+    PAYMENT_METHOD_BANK_TRANSFER,
+  );
   const [activePayment, setActivePayment] = useState<OpenPayment | null>(null);
 
   const [deliveryCountries, setDeliveryCountries] = useState<DeliveryCountry[]>([]);
@@ -208,6 +215,7 @@ export default function CartPage() {
 
   const handleCheckout = async () => {
     setCheckoutError("");
+    setCheckoutNotice("");
 
     if (!isAuthenticated && !disableAuth) {
       router.push("/signin?next=%2Fcart");
@@ -243,10 +251,12 @@ export default function CartPage() {
           phone: normalizePhoneE164(address.phone, address.country),
         },
         selectedDeliveryOptionId || undefined,
+        paymentMethod,
       );
 
       setAddress(initialAddress);
       // The cart is cleared server-side on order creation — just refresh it.
+      // (On checkout failure we never touch the cart.)
       await loadCart();
       setActivePayment(result);
     } catch (err) {
@@ -259,6 +269,11 @@ export default function CartPage() {
         try {
           const existing = await fetchCurrentPayment();
           if (existing) {
+            setCheckoutNotice(
+              existing.payment.method === PAYMENT_METHOD_BITCOIN
+                ? `You already have an active Bitcoin payment for order #${existing.orderNumber} — continuing that payment.`
+                : `You already have an unpaid order #${existing.orderNumber} — continuing that payment.`,
+            );
             setActivePayment(existing);
           } else {
             // Already under review (or gone) — nothing to upload here.
@@ -606,8 +621,61 @@ export default function CartPage() {
                 </div>
               ) : null}
 
+              <div className="mt-4 border-t border-pr_dg/10 pt-4">
+                <p className="text-sm font-semibold">Payment method</p>
+                <div className="mt-3 flex flex-col gap-2">
+                  {(
+                    [
+                      {
+                        value: PAYMENT_METHOD_BANK_TRANSFER,
+                        title: "Bank transfer",
+                        hint: "Pay by SEPA transfer and upload proof of payment",
+                      },
+                      {
+                        value: PAYMENT_METHOD_BITCOIN,
+                        title: "Bitcoin",
+                        hint: "Pay the exact BTC amount to a one-time address",
+                      },
+                    ] as const
+                  ).map((option) => {
+                    const checked = paymentMethod === option.value;
+                    return (
+                      <label
+                        key={option.value}
+                        className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3 transition ${
+                          checked
+                            ? "border-pr_dg bg-pr_dg/5"
+                            : "border-pr_dg/20"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          className="mt-0.5 accent-pr_dg"
+                          checked={checked}
+                          onChange={() => setPaymentMethod(option.value)}
+                        />
+                        <span>
+                          <span className="block text-sm font-medium">
+                            {option.title}
+                          </span>
+                          <span className="block text-xs text-pr_dg/60">
+                            {option.hint}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
               {checkoutError ? (
                 <p className="mt-3 text-xs text-pr_dr">{checkoutError}</p>
+              ) : null}
+              {checkoutNotice ? (
+                <p className="mt-3 rounded-xl bg-pr_dg/5 px-3 py-2 text-xs text-pr_dg/80">
+                  {checkoutNotice}
+                </p>
               ) : null}
 
               {!isAuthenticated && !disableAuth ? (
@@ -633,12 +701,12 @@ export default function CartPage() {
         )}
       </section>
 
-      <PaymentModal
+      <OpenPaymentModal
         payment={activePayment}
         isOpen={activePayment !== null}
         onClose={() => setActivePayment(null)}
         onUpdated={() => {
-          // Proof uploaded or order cancelled — refresh cart state.
+          // Proof uploaded / payment confirmed / order cancelled — refresh cart state.
           loadCart({ showSpinner: false });
         }}
       />
