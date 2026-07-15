@@ -522,7 +522,7 @@ export default function AdminOrderDetailPage() {
                       </p>
                     </div>
                     <div className="min-w-0 md:col-span-2">
-                      <p className="text-pr_w/50">Transaction ID</p>
+                      <p className="text-pr_w/50">Transaction ID (txHash)</p>
                       {payment.crypto.txHash ? (
                         <CopyValue
                           value={payment.crypto.txHash}
