@@ -105,7 +105,7 @@ export default function AdminOrderDetailPage() {
     setShippedAt(toDatetimeLocal(data.tracking.shippedAt));
     setDeliveredAt(toDatetimeLocal(data.tracking.deliveredAt));
     setCompletedAt(toDatetimeLocal(data.tracking.completedAt));
-    setReviewNote(data.payment.proof?.reviewNote ?? "");
+    setReviewNote(data.payment?.proof?.reviewNote ?? "");
   }, []);
 
   const load = useCallback(async () => {
@@ -248,7 +248,8 @@ export default function AdminOrderDetailPage() {
     );
   }
 
-  const proof = order.payment.proof;
+  const payment = order.payment ?? null;
+  const proof = payment?.proof ?? null;
   const inputCls =
     "w-full rounded-lg border border-pr_w/20 bg-transparent px-3 py-2 text-sm outline-none focus:border-pr_w";
   const smallInputCls =
@@ -278,8 +279,10 @@ export default function AdminOrderDetailPage() {
           </span>
           <span className="rounded-full border border-pr_w/20 px-3 py-1">
             Payment:{" "}
-            {PAYMENT_STATUS_LABEL[order.payment.status as AdminPaymentStatus] ??
-              order.payment.status}
+            {payment
+              ? (PAYMENT_STATUS_LABEL[payment.status as AdminPaymentStatus] ??
+                payment.status)
+              : "—"}
           </span>
         </div>
       </div>
@@ -407,64 +410,74 @@ export default function AdminOrderDetailPage() {
       {/* Payment controls */}
       <section className="rounded-2xl border border-pr_w/10 bg-pr_w/[0.03] p-5">
         <h2 className="text-sm font-semibold text-pr_w/80">Payment</h2>
-        <div className="mt-2 grid gap-4 md:grid-cols-2">
-          <div className="text-sm text-pr_w/80">
-            <p>
-              <span className="text-pr_w/60">Method:</span> {order.payment.method}
-            </p>
-            <p>
-              <span className="text-pr_w/60">Reference:</span>{" "}
-              <span className="font-mono">{order.payment.reference ?? "—"}</span>
-            </p>
-            <p>
-              <span className="text-pr_w/60">Amount:</span>{" "}
-              {formatPrice(order.payment.amountCents, order.payment.currency)}
-            </p>
-            <p>
-              <span className="text-pr_w/60">Confirmed at:</span>{" "}
-              {formatDate(order.payment.confirmedAt)}
-            </p>
-            <p>
-              <span className="text-pr_w/60">Proofs on record:</span>{" "}
-              {order.payment.proofCount}
-            </p>
-          </div>
-          {order.payment.bankTransfer ? (
-            <div className="rounded-lg border border-pr_w/10 p-3 text-xs text-pr_w/70">
-              <p className="mb-1 text-pr_w/60">Bank transfer target</p>
-              <p>{order.payment.bankTransfer.accountHolder}</p>
-              <p className="font-mono">{order.payment.bankTransfer.iban}</p>
-              <p>
-                {order.payment.bankTransfer.bic} ·{" "}
-                {order.payment.bankTransfer.bankName}
-              </p>
+        {payment ? (
+          <>
+            <div className="mt-2 grid gap-4 md:grid-cols-2">
+              <div className="text-sm text-pr_w/80">
+                <p>
+                  <span className="text-pr_w/60">Method:</span> {payment.method}
+                </p>
+                <p>
+                  <span className="text-pr_w/60">Reference:</span>{" "}
+                  <span className="font-mono">{payment.reference ?? "—"}</span>
+                </p>
+                <p>
+                  <span className="text-pr_w/60">Amount:</span>{" "}
+                  {formatPrice(payment.amountCents, payment.currency)}
+                </p>
+                <p>
+                  <span className="text-pr_w/60">Confirmed at:</span>{" "}
+                  {formatDate(payment.confirmedAt)}
+                </p>
+                <p>
+                  <span className="text-pr_w/60">Proofs on record:</span>{" "}
+                  {payment.proofCount}
+                </p>
+              </div>
+              {payment.bankTransfer ? (
+                <div className="rounded-lg border border-pr_w/10 p-3 text-xs text-pr_w/70">
+                  <p className="mb-1 text-pr_w/60">Bank transfer target</p>
+                  <p>{payment.bankTransfer.accountHolder}</p>
+                  <p className="font-mono">{payment.bankTransfer.iban}</p>
+                  <p>
+                    {payment.bankTransfer.bic} ·{" "}
+                    {payment.bankTransfer.bankName}
+                  </p>
+                </div>
+              ) : null}
             </div>
-          ) : null}
-        </div>
 
-        <p className="mt-4 text-xs text-pr_w/60">
-          Confirming an UNDER_REVIEW payment also marks a PENDING order as PAID.
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {ADMIN_PAYMENT_STATUSES.map((s) => {
-            const active = order.payment.status === s;
-            return (
-              <button
-                key={s}
-                type="button"
-                disabled={busy === "payment" || active}
-                onClick={() => handleUpdatePayment(s)}
-                className={`rounded-full px-3 py-1.5 text-xs transition ${
-                  active
-                    ? "bg-pr_lg text-pr_dg font-semibold"
-                    : "border border-pr_w/20 text-pr_w/80 hover:text-pr_w disabled:opacity-40"
-                }`}
-              >
-                {PAYMENT_STATUS_LABEL[s]}
-              </button>
-            );
-          })}
-        </div>
+            <p className="mt-4 text-xs text-pr_w/60">
+              Confirming an UNDER_REVIEW payment also marks a PENDING order as
+              PAID.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {ADMIN_PAYMENT_STATUSES.map((s) => {
+                const active = payment.status === s;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={busy === "payment" || active}
+                    onClick={() => handleUpdatePayment(s)}
+                    className={`rounded-full px-3 py-1.5 text-xs transition ${
+                      active
+                        ? "bg-pr_lg text-pr_dg font-semibold"
+                        : "border border-pr_w/20 text-pr_w/80 hover:text-pr_w disabled:opacity-40"
+                    }`}
+                  >
+                    {PAYMENT_STATUS_LABEL[s]}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <p className="mt-2 text-sm text-pr_w/60">
+            No payment details returned for this order — the backend may not
+            support this order&apos;s payment method yet.
+          </p>
+        )}
       </section>
 
       {/* Payment proof */}

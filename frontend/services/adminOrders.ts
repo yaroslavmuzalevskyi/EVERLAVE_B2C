@@ -105,7 +105,12 @@ export type AdminOrderListItem = {
   status: AdminOrderStatus | string;
   customer: AdminOrderCustomer;
   totals: AdminOrderTotals;
-  payment: AdminOrderPayment;
+  /**
+   * Nullable: the backend may return no payment object for some orders
+   * (e.g. Bitcoin orders on an older serializer) — never dereference
+   * without a guard.
+   */
+  payment: AdminOrderPayment | null;
   tracking: AdminOrderTracking;
   createdAt: string;
 };

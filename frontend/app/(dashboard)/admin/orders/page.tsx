@@ -453,19 +453,23 @@ export default function AdminOrdersPage() {
                     </span>
                   </td>
                   <td className="py-3 pr-4">
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs ${paymentStatusBadgeClass(order.payment.status)}`}
-                    >
-                      {PAYMENT_STATUS_LABEL[
-                        order.payment.status as AdminPaymentStatus
-                      ] ?? order.payment.status}
-                    </span>
+                    {order.payment ? (
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs ${paymentStatusBadgeClass(order.payment.status)}`}
+                      >
+                        {PAYMENT_STATUS_LABEL[
+                          order.payment.status as AdminPaymentStatus
+                        ] ?? order.payment.status}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-pr_w/40">—</span>
+                    )}
                   </td>
                   <td className="py-3">
-                    {order.payment.proofCount > 0 ? (
+                    {(order.payment?.proofCount ?? 0) > 0 ? (
                       <span className="text-xs text-pr_w/70">
-                        {order.payment.proofCount} file
-                        {order.payment.proofCount > 1 ? "s" : ""}
+                        {order.payment!.proofCount} file
+                        {order.payment!.proofCount > 1 ? "s" : ""}
                       </span>
                     ) : (
                       <span className="text-xs text-pr_w/40">—</span>
