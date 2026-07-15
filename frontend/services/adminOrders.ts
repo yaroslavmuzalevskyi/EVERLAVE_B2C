@@ -115,6 +115,8 @@ export type AdminOrderPayment = {
   confirmedAt: string | null;
   proofCount: number;
   proof: AdminPaymentProof | null;
+  /** Payment-level review note (used when there is no proof, e.g. Bitcoin). */
+  reviewNote?: string | null;
   bankTransfer?: AdminBankTransferAccount | null;
   crypto?: AdminCryptoPayment | null;
 };

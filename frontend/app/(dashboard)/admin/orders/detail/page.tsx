@@ -52,13 +52,6 @@ function formatDate(v?: string | null) {
   });
 }
 
-/** mempool.space explorer base for the invoice's network. */
-function mempoolBaseUrl(network?: string | null) {
-  return network?.includes("testnet")
-    ? "https://mempool.space/testnet"
-    : "https://mempool.space";
-}
-
 function formatBytes(n: number | null | undefined) {
   if (!n) return "";
   if (n >= 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
@@ -114,7 +107,11 @@ export default function AdminOrderDetailPage() {
     setShippedAt(toDatetimeLocal(data.tracking.shippedAt));
     setDeliveredAt(toDatetimeLocal(data.tracking.deliveredAt));
     setCompletedAt(toDatetimeLocal(data.tracking.completedAt));
-    setReviewNote(data.payment?.proof?.reviewNote ?? "");
+    // Proof-level note for bank transfers; payment-level note for proofless
+    // payments (e.g. Bitcoin, which never has proof files).
+    setReviewNote(
+      data.payment?.proof?.reviewNote ?? data.payment?.reviewNote ?? "",
+    );
   }, []);
 
   const load = useCallback(async () => {
@@ -472,14 +469,6 @@ export default function AdminOrderDetailPage() {
                         label="Copy Bitcoin address"
                         className="text-xs"
                       />
-                      <a
-                        href={`${mempoolBaseUrl(payment.crypto.network)}/address/${payment.crypto.address}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-2 text-pr_lg underline hover:text-pr_w"
-                      >
-                        View on mempool.space
-                      </a>
                     </div>
                     <div>
                       <p className="text-pr_w/50">Expected amount</p>
@@ -535,26 +524,14 @@ export default function AdminOrderDetailPage() {
                     <div className="min-w-0 md:col-span-2">
                       <p className="text-pr_w/50">Transaction ID</p>
                       {payment.crypto.txHash ? (
-                        <>
-                          <CopyValue
-                            value={payment.crypto.txHash}
-                            display={shortenTxHash(payment.crypto.txHash)}
-                            label="Copy transaction ID"
-                            className="text-xs"
-                          />
-                          <a
-                            href={`${mempoolBaseUrl(payment.crypto.network)}/tx/${payment.crypto.txHash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-2 text-pr_lg underline hover:text-pr_w"
-                          >
-                            View transaction
-                          </a>
-                        </>
+                        <CopyValue
+                          value={payment.crypto.txHash}
+                          display={shortenTxHash(payment.crypto.txHash)}
+                          label="Copy transaction ID"
+                          className="text-xs"
+                        />
                       ) : (
-                        <p className="text-pr_w/50">
-                          Not provided — search by address on the explorer.
-                        </p>
+                        <p className="text-pr_w/50">Not provided.</p>
                       )}
                     </div>
                     {payment.crypto.provider ||
@@ -612,7 +589,11 @@ export default function AdminOrderDetailPage() {
 
       {/* Payment proof */}
       <section className="rounded-2xl border border-pr_w/10 bg-pr_w/[0.03] p-5">
-        <h2 className="text-sm font-semibold text-pr_w/80">Payment proof</h2>
+        <h2 className="text-sm font-semibold text-pr_w/80">
+          {payment?.method === "BITCOIN"
+            ? "Review notes"
+            : "Payment proof & notes"}
+        </h2>
         {proof ? (
           <div className="mt-2 grid gap-4 md:grid-cols-2">
             <div className="space-y-1 text-sm text-pr_w/80">
@@ -674,7 +655,9 @@ export default function AdminOrderDetailPage() {
           </div>
         ) : (
           <p className="mt-2 text-xs text-pr_w/40">
-            No proof uploaded yet.
+            {payment?.method === "BITCOIN"
+              ? "Bitcoin payments don't use proof files — verify on the blockchain instead. You can still leave a review note below."
+              : "No proof uploaded yet."}
           </p>
         )}
 
@@ -684,13 +667,17 @@ export default function AdminOrderDetailPage() {
             value={reviewNote}
             onChange={(e) => setReviewNote(e.target.value)}
             rows={3}
-            placeholder="Reason for rejection, or matching notes"
+            placeholder={
+              payment?.method === "BITCOIN"
+                ? "e.g. tx verified on-chain, amount matches"
+                : "Reason for rejection, or matching notes"
+            }
             className={`mt-1 ${inputCls}`}
           />
           <div className="mt-2 flex items-center gap-3">
             <button
               type="button"
-              disabled={busy === "note" || !proof}
+              disabled={busy === "note"}
               onClick={handleSaveNote}
               className="rounded-full bg-pr_lg px-4 py-2 text-xs font-semibold text-pr_dg disabled:opacity-50"
             >
