@@ -24,7 +24,7 @@ export const ADMIN_PAYMENT_STATUSES = [
 
 export type AdminPaymentStatus = (typeof ADMIN_PAYMENT_STATUSES)[number];
 
-export const ADMIN_PAYMENT_METHODS = ["BANK_TRANSFER"] as const;
+export const ADMIN_PAYMENT_METHODS = ["BANK_TRANSFER", "BITCOIN"] as const;
 
 export type AdminPaymentMethod = (typeof ADMIN_PAYMENT_METHODS)[number];
 
@@ -79,6 +79,33 @@ export type AdminBankTransferAccount = {
   bankName?: string;
 };
 
+export type AdminCryptoExchangeRate = {
+  base?: string | null;
+  quote?: string | null;
+  /** Decimal string, e.g. "61500.00" — display verbatim. */
+  rate?: string | null;
+  source?: string | null;
+};
+
+/**
+ * Bitcoin invoice attached to `payment.crypto` for BITCOIN orders.
+ * `amountBtc` is an exact decimal string — never round-trip through a
+ * JS number. `provider`/`addressIndex` only appear in the detail response.
+ */
+export type AdminCryptoPayment = {
+  provider?: string | null;
+  network: string;
+  asset?: string | null;
+  address: string;
+  addressIndex?: number | null;
+  amountBtc: string;
+  amountSats?: number | null;
+  exchangeRate?: AdminCryptoExchangeRate | null;
+  expiresAt?: string | null;
+  txHash?: string | null;
+  markedPaidAt?: string | null;
+};
+
 export type AdminOrderPayment = {
   method: AdminPaymentMethod | string;
   status: AdminPaymentStatus | string;
@@ -89,6 +116,7 @@ export type AdminOrderPayment = {
   proofCount: number;
   proof: AdminPaymentProof | null;
   bankTransfer?: AdminBankTransferAccount | null;
+  crypto?: AdminCryptoPayment | null;
 };
 
 export type AdminOrderTracking = {

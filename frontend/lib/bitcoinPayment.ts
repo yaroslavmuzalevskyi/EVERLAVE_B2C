@@ -1,14 +1,5 @@
 import { CryptoPayment, PAYMENT_STATUS } from "@/services/orders";
 
-/**
- * Pure helpers for the customer-facing Bitcoin payment flow.
- * Everything here is deterministic (time is injectable) so it can be
- * unit-tested without a DOM.
- */
-
-// --- Time helpers (all timestamps are UTC ISO strings from the API) ---
-
-/** True when the invoice expiry has passed. Missing/invalid dates are never expired. */
 export function isCryptoExpired(
   expiresAt: string | null | undefined,
   now: number = Date.now(),
@@ -19,7 +10,6 @@ export function isCryptoExpired(
   return now >= expiry;
 }
 
-/** True when the customer clicked "I paid" after the invoice expired. */
 export function isMarkedPaidLate(
   markedPaidAt: string | null | undefined,
   expiresAt: string | null | undefined,
@@ -31,22 +21,14 @@ export function isMarkedPaidLate(
   return marked > expiry;
 }
 
-// --- Display helpers ---
-
-/**
- * Shorten a long value (address / txHash) keeping both ends visible:
- * "tb1qexampl…xxxxxxxx". Values short enough to show whole are returned
- * unchanged. Always copy the FULL value, never the shortened one.
- */
 export function shortenMiddle(value: string, head = 10, tail = 8): string {
   if (value.length <= head + tail + 1) return value;
   return `${value.slice(0, head)}…${value.slice(-tail)}`;
 }
 
-export const shortenAddress = (address: string) => shortenMiddle(address, 10, 8);
+export const shortenAddress = (address: string) =>
+  shortenMiddle(address, 10, 8);
 export const shortenTxHash = (txHash: string) => shortenMiddle(txHash, 8, 6);
-
-// --- Derived Bitcoin order state ---
 
 export type BitcoinStateKey =
   | "AWAITING_PAYMENT"
@@ -65,19 +47,12 @@ export type BitcoinStateKey =
 
 export type BitcoinOrderState = {
   key: BitcoinStateKey;
-  /** Human-readable derived state, e.g. "Awaiting Bitcoin payment". */
   label: string;
-  /** Badge tone for the derived state. */
   tone: "amber" | "red" | "blue" | "green" | "muted";
-  /** Final states hide every payment action. */
   isFinal: boolean;
-  /** "I paid" is available (payment still PENDING). */
   canConfirm: boolean;
-  /** The invoice can still be opened ("Continue payment"). */
   canContinue: boolean;
-  /** Expired PENDING invoice: recommend cancelling as the primary action. */
   cancelRecommended: boolean;
-  /** Show the QR code — only while the payment is actionable. */
   showQr: boolean;
 };
 
@@ -102,12 +77,6 @@ const finalState = (
   showQr: false,
 });
 
-/**
- * Single source of truth mapping order status + payment status (+ invoice
- * timing) to a customer-facing Bitcoin payment state. Never show
- * UNDER_REVIEW as paid/confirmed — the admin has not verified it yet.
- * Unknown combinations fall back to a safe state with all actions hidden.
- */
 export function deriveBitcoinOrderState(
   input: BitcoinStateInput,
   now: number = Date.now(),
@@ -117,7 +86,10 @@ export function deriveBitcoinOrderState(
   if (orderStatus === "REFUNDED" || paymentStatus === PAYMENT_STATUS.REFUNDED) {
     return finalState("REFUNDED", "Bitcoin payment refunded", "muted");
   }
-  if (orderStatus === "CANCELLED" || paymentStatus === PAYMENT_STATUS.CANCELLED) {
+  if (
+    orderStatus === "CANCELLED" ||
+    paymentStatus === PAYMENT_STATUS.CANCELLED
+  ) {
     return finalState(
       "CANCELLED",
       orderStatus === "CANCELLED" ? "Order cancelled" : "Payment cancelled",
@@ -198,7 +170,5 @@ export function deriveBitcoinOrderState(
     }
   }
 
-  // Unknown combination: don't crash, don't offer risky actions — the raw
-  // order/payment badges stay visible alongside this fallback label.
   return finalState("UNKNOWN", "Order status requires attention", "muted");
 }

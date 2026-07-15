@@ -18,6 +18,8 @@ import {
   updateAdminPaymentProofNote,
 } from "@/services/adminOrders";
 import { formatPrice } from "@/services/products";
+import CopyValue from "@/components/orders/CopyValue";
+import { isMarkedPaidLate, shortenTxHash } from "@/lib/bitcoinPayment";
 
 const ORDER_STATUS_LABEL: Record<AdminOrderStatus, string> = {
   PENDING: "Pending",
@@ -48,6 +50,13 @@ function formatDate(v?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/** mempool.space explorer base for the invoice's network. */
+function mempoolBaseUrl(network?: string | null) {
+  return network?.includes("testnet")
+    ? "https://mempool.space/testnet"
+    : "https://mempool.space";
 }
 
 function formatBytes(n: number | null | undefined) {
@@ -443,6 +452,127 @@ export default function AdminOrderDetailPage() {
                     {payment.bankTransfer.bic} ·{" "}
                     {payment.bankTransfer.bankName}
                   </p>
+                </div>
+              ) : null}
+              {payment.crypto ? (
+                <div className="rounded-lg border border-orange-400/30 p-3 text-xs text-pr_w/80 md:col-span-2">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-orange-500/20 px-2 py-0.5 font-medium text-orange-300">
+                      ₿ Bitcoin invoice
+                    </span>
+                    <span className="rounded-full bg-pr_w/10 px-2 py-0.5 text-pr_w/70">
+                      {payment.crypto.network}
+                    </span>
+                  </div>
+                  <div className="grid gap-x-6 gap-y-2 md:grid-cols-2">
+                    <div className="min-w-0 md:col-span-2">
+                      <p className="text-pr_w/50">Address</p>
+                      <CopyValue
+                        value={payment.crypto.address}
+                        label="Copy Bitcoin address"
+                        className="text-xs"
+                      />
+                      <a
+                        href={`${mempoolBaseUrl(payment.crypto.network)}/address/${payment.crypto.address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-2 text-pr_lg underline hover:text-pr_w"
+                      >
+                        View on mempool.space
+                      </a>
+                    </div>
+                    <div>
+                      <p className="text-pr_w/50">Expected amount</p>
+                      <CopyValue
+                        value={payment.crypto.amountBtc}
+                        display={`${payment.crypto.amountBtc} ${payment.crypto.asset ?? "BTC"}`}
+                        label="Copy Bitcoin amount"
+                        className="text-xs font-semibold"
+                      />
+                      {payment.crypto.amountSats != null ? (
+                        <p className="text-pr_w/50">
+                          = {payment.crypto.amountSats.toLocaleString()} sats
+                        </p>
+                      ) : null}
+                    </div>
+                    {payment.crypto.exchangeRate?.rate ? (
+                      <div>
+                        <p className="text-pr_w/50">Exchange rate</p>
+                        <p>
+                          1 {payment.crypto.exchangeRate.base ?? "BTC"} ={" "}
+                          {payment.crypto.exchangeRate.rate}{" "}
+                          {payment.crypto.exchangeRate.quote ?? payment.currency}
+                          {payment.crypto.exchangeRate.source
+                            ? ` (${payment.crypto.exchangeRate.source})`
+                            : ""}
+                        </p>
+                      </div>
+                    ) : null}
+                    <div>
+                      <p className="text-pr_w/50">Invoice expires</p>
+                      <p>{formatDate(payment.crypto.expiresAt)}</p>
+                    </div>
+                    <div>
+                      <p className="text-pr_w/50">Customer marked paid</p>
+                      <p>
+                        {formatDate(payment.crypto.markedPaidAt)}
+                        {payment.crypto.markedPaidAt ? (
+                          isMarkedPaidLate(
+                            payment.crypto.markedPaidAt,
+                            payment.crypto.expiresAt,
+                          ) ? (
+                            <span className="ml-1 text-amber-300">
+                              (after expiry)
+                            </span>
+                          ) : (
+                            <span className="ml-1 text-emerald-300">
+                              (on time)
+                            </span>
+                          )
+                        ) : null}
+                      </p>
+                    </div>
+                    <div className="min-w-0 md:col-span-2">
+                      <p className="text-pr_w/50">Transaction ID</p>
+                      {payment.crypto.txHash ? (
+                        <>
+                          <CopyValue
+                            value={payment.crypto.txHash}
+                            display={shortenTxHash(payment.crypto.txHash)}
+                            label="Copy transaction ID"
+                            className="text-xs"
+                          />
+                          <a
+                            href={`${mempoolBaseUrl(payment.crypto.network)}/tx/${payment.crypto.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-pr_lg underline hover:text-pr_w"
+                          >
+                            View transaction
+                          </a>
+                        </>
+                      ) : (
+                        <p className="text-pr_w/50">
+                          Not provided — search by address on the explorer.
+                        </p>
+                      )}
+                    </div>
+                    {payment.crypto.provider ||
+                    payment.crypto.addressIndex != null ? (
+                      <p className="text-pr_w/40 md:col-span-2">
+                        {payment.crypto.provider
+                          ? `Provider: ${payment.crypto.provider}`
+                          : ""}
+                        {payment.crypto.provider &&
+                        payment.crypto.addressIndex != null
+                          ? " · "
+                          : ""}
+                        {payment.crypto.addressIndex != null
+                          ? `Address index: ${payment.crypto.addressIndex}`
+                          : ""}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
             </div>

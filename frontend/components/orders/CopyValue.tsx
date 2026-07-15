@@ -52,16 +52,17 @@ export default function CopyValue({
       title={value}
       aria-label={label}
       className={cn(
-        "group inline-flex max-w-full items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-left font-mono transition hover:bg-pr_dg/5",
+        "group inline-flex max-w-full items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-left font-mono transition hover:bg-current/5",
         className,
       )}
     >
       <span className="break-all">{display ?? value}</span>
+      {/* Inherit the surrounding text color so this works on light and dark surfaces. */}
       <span
         aria-hidden="true"
         className={cn(
           "shrink-0 text-[10px] font-sans uppercase tracking-wide",
-          copied ? "text-green-700" : "text-pr_dg/40 group-hover:text-pr_dg/70",
+          copied ? "text-green-600" : "opacity-40 group-hover:opacity-80",
         )}
       >
         {copied ? "Copied!" : "Copy"}

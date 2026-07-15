@@ -14,6 +14,8 @@ import {
   fetchAdminOrders,
 } from "@/services/adminOrders";
 import { formatPrice } from "@/services/products";
+import CopyValue from "@/components/orders/CopyValue";
+import { shortenAddress, shortenTxHash } from "@/lib/bitcoinPayment";
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -88,6 +90,20 @@ function paymentStatusBadgeClass(status: string) {
     default:
       return "border border-pr_w/15 text-pr_w/70";
   }
+}
+
+/** Visually distinguish payment methods at a glance. */
+function paymentMethodBadge(method: string) {
+  if (method === "BITCOIN") {
+    return {
+      label: "₿ Bitcoin",
+      className: "bg-orange-500/20 text-orange-300",
+    };
+  }
+  return {
+    label: "Bank",
+    className: "bg-pr_w/10 text-pr_w/70",
+  };
 }
 
 function formatDate(value?: string | null) {
@@ -467,13 +483,58 @@ export default function AdminOrdersPage() {
                   </td>
                   <td className="py-3 pr-4">
                     {order.payment ? (
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs ${paymentStatusBadgeClass(order.payment.status)}`}
-                      >
-                        {PAYMENT_STATUS_LABEL[
-                          order.payment.status as AdminPaymentStatus
-                        ] ?? order.payment.status}
-                      </span>
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {(() => {
+                            const badge = paymentMethodBadge(
+                              order.payment.method,
+                            );
+                            return (
+                              <span
+                                className={`rounded-full px-2 py-1 text-xs font-medium ${badge.className}`}
+                              >
+                                {badge.label}
+                              </span>
+                            );
+                          })()}
+                          <span
+                            className={`rounded-full px-2 py-1 text-xs ${paymentStatusBadgeClass(order.payment.status)}`}
+                          >
+                            {PAYMENT_STATUS_LABEL[
+                              order.payment.status as AdminPaymentStatus
+                            ] ?? order.payment.status}
+                          </span>
+                        </div>
+                        {order.payment.crypto ? (
+                          <div className="space-y-0.5 text-xs text-pr_w/70">
+                            <p className="font-mono">
+                              {order.payment.crypto.amountBtc}{" "}
+                              {order.payment.crypto.asset ?? "BTC"}
+                            </p>
+                            <CopyValue
+                              value={order.payment.crypto.address}
+                              display={shortenAddress(
+                                order.payment.crypto.address,
+                              )}
+                              label="Copy Bitcoin address"
+                              className="text-xs"
+                            />
+                            {order.payment.crypto.txHash ? (
+                              <div>
+                                <span className="text-pr_w/40">tx </span>
+                                <CopyValue
+                                  value={order.payment.crypto.txHash}
+                                  display={shortenTxHash(
+                                    order.payment.crypto.txHash,
+                                  )}
+                                  label="Copy transaction ID"
+                                  className="text-xs"
+                                />
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
                     ) : (
                       <span className="text-xs text-pr_w/40">—</span>
                     )}
