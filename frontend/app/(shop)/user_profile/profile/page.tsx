@@ -1,26 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RequireAuth from "@/components/auth/RequireAuth";
 import UserHeader from "@/components/userProfile/UserHeader";
 import { useAuth } from "@/components/auth/AuthProvider";
 import Modal from "@/components/ui/Modal";
-import {
-  getStoredProfileEmail,
-  getStoredProfileName,
-  setStoredProfileName,
-} from "@/lib/userProfile";
+import { setStoredProfileName } from "@/lib/userProfile";
 import { updateMyName, updateMyPassword } from "@/services/users";
 
 const DEFAULT_NAME = "";
-const DEFAULT_EMAIL = "";
 
 export default function ProfilePage() {
-  const { logout } = useAuth();
-  const [name, setName] = useState(
-    () => getStoredProfileName() || DEFAULT_NAME,
-  );
-  const [email] = useState(() => getStoredProfileEmail() || DEFAULT_EMAIL);
+  const { logout, profileName, profileEmail, refreshProfile } = useAuth();
+  const [name, setName] = useState(() => profileName || DEFAULT_NAME);
+  // Once the user edits the field, stop overwriting it with the server value.
+  const nameDirty = useRef(false);
+  const email = profileEmail;
+
+  // The authoritative name arrives from GET /users/me shortly after mount;
+  // reflect it into the input while it's still untouched.
+  useEffect(() => {
+    if (!nameDirty.current) setName(profileName || DEFAULT_NAME);
+  }, [profileName]);
+
   const [nameLoading, setNameLoading] = useState(false);
   const [nameError, setNameError] = useState("");
   const [nameSuccess, setNameSuccess] = useState("");
@@ -59,7 +61,10 @@ export default function ProfilePage() {
       const result = await updateMyName(name);
       const updatedName = result.name.trim() || name.trim();
       setName(updatedName);
-      setStoredProfileName(updatedName);
+      setStoredProfileName(updatedName, email || undefined);
+      nameDirty.current = false;
+      // Sync the new name into the shared auth context (UserHeader, orders).
+      await refreshProfile();
       setNameSuccess("Name updated successfully.");
     } catch (error) {
       setNameError(
@@ -116,7 +121,10 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     value={name}
-                    onChange={(event) => setName(event.target.value)}
+                    onChange={(event) => {
+                      nameDirty.current = true;
+                      setName(event.target.value);
+                    }}
                     className="w-full rounded-full border border-pr_dg/30 px-4 py-3 text-sm text-pr_dg outline-none"
                   />
                 </label>

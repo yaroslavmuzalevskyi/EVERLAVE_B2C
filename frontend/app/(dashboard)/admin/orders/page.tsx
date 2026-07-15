@@ -416,14 +416,27 @@ export default function AdminOrdersPage() {
                   </td>
                 </tr>
               ) : null}
-              {orders.map((order) => (
+              {orders.map((order) => {
+                const detailHref = `/admin/orders/detail?orderNumber=${order.orderNumber}`;
+                return (
                 <tr
                   key={order.orderNumber}
-                  className="border-b border-pr_w/5 align-top"
+                  onClick={(event) => {
+                    // Ignore clicks on interactive children (links, buttons) and
+                    // text selections so the row navigation stays unobtrusive.
+                    if (
+                      (event.target as HTMLElement).closest("a,button") ||
+                      window.getSelection()?.toString()
+                    ) {
+                      return;
+                    }
+                    router.push(detailHref);
+                  }}
+                  className="cursor-pointer border-b border-pr_w/5 align-top transition-colors hover:bg-pr_w/5"
                 >
                   <td className="py-3 pr-4">
                     <Link
-                      href={`/admin/orders/detail?orderNumber=${order.orderNumber}`}
+                      href={detailHref}
                       className="font-medium hover:underline"
                     >
                       #{order.orderNumber}
@@ -476,7 +489,8 @@ export default function AdminOrdersPage() {
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
 

@@ -19,9 +19,12 @@ import {
 } from "@/lib/authTokens";
 import { syncLegacyGuestCartToApi } from "@/services/cart";
 import {
+  getStoredProfileEmail,
+  getStoredProfileName,
   setStoredProfileEmail,
   setStoredProfileName,
 } from "@/lib/userProfile";
+import { fetchMyProfile } from "@/services/users";
 import { apiFetch } from "@/lib/apiClient";
 
 type AuthContextValue = {
@@ -29,6 +32,12 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   isAdmin: boolean;
   isInitializing: boolean;
+  /** Display name, sourced from GET /users/me (cached in localStorage). */
+  profileName: string;
+  /** Account email, sourced from GET /users/me (cached in localStorage). */
+  profileEmail: string;
+  /** Re-fetch the profile from the server (e.g. after a name change). */
+  refreshProfile: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -200,6 +209,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [accessToken, setAccessTokenState] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  // Seed from the localStorage cache so the name shows instantly on load;
+  // the server value (GET /users/me) overrides it once authenticated.
+  const [profileName, setProfileName] = useState(() => getStoredProfileName());
+  const [profileEmail, setProfileEmail] = useState(() =>
+    getStoredProfileEmail(),
+  );
+
+  const refreshProfile = useCallback(async () => {
+    if (DISABLE_AUTH) return;
+    try {
+      const profile = await fetchMyProfile();
+      if (profile.email) {
+        setProfileEmail(profile.email);
+        setStoredProfileEmail(profile.email);
+      }
+      if (profile.name) {
+        setProfileName(profile.name);
+        setStoredProfileName(profile.name, profile.email || undefined);
+      }
+    } catch {
+      // Keep the cached name; a transient /users/me failure shouldn't blank it.
+    }
+  }, []);
 
   useEffect(() => {
     if (DISABLE_AUTH) {
@@ -370,9 +402,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       applyTokens(tokens);
       setStoredProfileEmail(normalizedEmail);
-      // Pull name from JWT payload so each account gets its own name from DB
+      setProfileEmail(normalizedEmail);
+      // Seed the name from the JWT (if present) for an instant display; the
+      // GET /users/me effect then reconciles it with the DB value.
       const jwtPayload = decodeJwtPayload(tokens.accessToken!);
-      if (jwtPayload.name) setStoredProfileName(jwtPayload.name, normalizedEmail);
+      if (jwtPayload.name) {
+        setStoredProfileName(jwtPayload.name, normalizedEmail);
+        setProfileName(jwtPayload.name);
+      }
       await syncLegacyGuestCartToApi();
     },
     [applyTokens],
@@ -401,8 +438,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = extractAuthTokens(await response.json().catch(() => ({})));
-      setStoredProfileName(name.trim());
+      // Set the email first so the name is stored under the correct per-user key.
       setStoredProfileEmail(normalizedEmail);
+      setStoredProfileName(name.trim(), normalizedEmail);
+      setProfileEmail(normalizedEmail);
+      setProfileName(name.trim());
 
       if (data?.accessToken) {
         applyTokens(data);
@@ -433,9 +473,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearTokens();
       clearSessionLastSeenAt();
       setAccessTokenState(null);
+      setProfileName("");
+      setProfileEmail("");
       router.push("/signin");
     }
   }, [router]);
+
+  // Pull the authoritative name/email from the server whenever we become
+  // authenticated. This is the source of truth — the JWT may not carry a
+  // `name` claim, and localStorage is per-device, so without this a user on
+  // a fresh browser would fall back to a stale placeholder name.
+  useEffect(() => {
+    if (DISABLE_AUTH || !accessToken) return;
+    refreshProfile();
+  }, [accessToken, refreshProfile]);
 
   const [isAdminState, setIsAdminState] = useState(false);
 
@@ -465,11 +516,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: DISABLE_AUTH ? true : Boolean(accessToken),
       isAdmin: isAdminState,
       isInitializing: DISABLE_AUTH ? false : isInitializing,
+      profileName,
+      profileEmail,
+      refreshProfile,
       login,
       register,
       logout,
     }),
-    [accessToken, isAdminState, isInitializing, login, logout, register],
+    [
+      accessToken,
+      isAdminState,
+      isInitializing,
+      profileName,
+      profileEmail,
+      refreshProfile,
+      login,
+      logout,
+      register,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

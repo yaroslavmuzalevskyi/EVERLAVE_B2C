@@ -6,6 +6,7 @@ import OrderCard from "@/components/orders/OrderCard";
 import OpenPaymentModal from "@/components/orders/OpenPaymentModal";
 import RequireAuth from "@/components/auth/RequireAuth";
 import UserHeader from "@/components/userProfile/UserHeader";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
   Order,
   OpenPayment,
@@ -16,7 +17,6 @@ import {
   fetchOrders,
   openPaymentFromOrder,
 } from "@/services/orders";
-import { getStoredProfileName } from "@/lib/userProfile";
 
 const PAGE_SIZE = 16;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -58,9 +58,8 @@ function OrdersPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [userName] = useState(
-    () => getStoredProfileName() || "Stephan Macroski",
-  );
+  const { profileName } = useAuth();
+  const userName = profileName || "there";
 
   const urlSearch = searchParams.get("search") ?? "";
   const urlStatuses = useMemo(
