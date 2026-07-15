@@ -52,6 +52,13 @@ function formatDate(v?: string | null) {
   });
 }
 
+/** mempool.space explorer base for the invoice's network. */
+function mempoolBaseUrl(network?: string | null) {
+  return network?.includes("testnet")
+    ? "https://mempool.space/testnet"
+    : "https://mempool.space";
+}
+
 function formatBytes(n: number | null | undefined) {
   if (!n) return "";
   if (n >= 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
@@ -469,6 +476,14 @@ export default function AdminOrderDetailPage() {
                         label="Copy Bitcoin address"
                         className="text-xs"
                       />
+                      <a
+                        href={`${mempoolBaseUrl(payment.crypto.network)}/address/${payment.crypto.address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-2 text-pr_lg underline hover:text-pr_w"
+                      >
+                        View on mempool.space
+                      </a>
                     </div>
                     <div>
                       <p className="text-pr_w/50">Expected amount</p>
@@ -524,12 +539,22 @@ export default function AdminOrderDetailPage() {
                     <div className="min-w-0 md:col-span-2">
                       <p className="text-pr_w/50">Transaction ID (txHash)</p>
                       {payment.crypto.txHash ? (
-                        <CopyValue
-                          value={payment.crypto.txHash}
-                          display={shortenTxHash(payment.crypto.txHash)}
-                          label="Copy transaction ID"
-                          className="text-xs"
-                        />
+                        <>
+                          <CopyValue
+                            value={payment.crypto.txHash}
+                            display={shortenTxHash(payment.crypto.txHash)}
+                            label="Copy transaction ID"
+                            className="text-xs"
+                          />
+                          <a
+                            href={`${mempoolBaseUrl(payment.crypto.network)}/tx/${payment.crypto.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-pr_lg underline hover:text-pr_w"
+                          >
+                            View transaction
+                          </a>
+                        </>
                       ) : (
                         <p className="text-pr_w/50">Not provided.</p>
                       )}
