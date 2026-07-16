@@ -126,6 +126,7 @@ export default function CartPage() {
     PAYMENT_METHOD_BANK_TRANSFER,
   );
   const [activePayment, setActivePayment] = useState<OpenPayment | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const [deliveryCountries, setDeliveryCountries] = useState<DeliveryCountry[]>([]);
   const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([]);
@@ -235,6 +236,13 @@ export default function CartPage() {
       !address.country.trim()
     ) {
       setCheckoutError("Please fill in all required address fields.");
+      return;
+    }
+
+    if (!agreedToTerms) {
+      setCheckoutError(
+        "Please accept the Terms and Conditions to continue.",
+      );
       return;
     }
 
@@ -683,6 +691,29 @@ export default function CartPage() {
                   Sign in to complete checkout.
                 </p>
               ) : null}
+
+              <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-xs text-pr_dg/80">
+                <input
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(event) => {
+                    setAgreedToTerms(event.target.checked);
+                    if (event.target.checked) setCheckoutError("");
+                  }}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-pr_dg"
+                />
+                <span>
+                  I have read and agree to the{" "}
+                  <Link
+                    href="/terms-and-conditions"
+                    target="_blank"
+                    className="font-semibold text-pr_dg underline"
+                  >
+                    Terms and Conditions
+                  </Link>
+                  .
+                </span>
+              </label>
 
               <button
                 type="button"

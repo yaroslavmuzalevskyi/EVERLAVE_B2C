@@ -220,7 +220,13 @@ export default function BitcoinPaymentModal({
     ) : null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      className="max-w-xl"
+      closeOnBackdrop={false}
+      showCloseButton
+    >
       {submitted ? (
         <div className="text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-2xl">
