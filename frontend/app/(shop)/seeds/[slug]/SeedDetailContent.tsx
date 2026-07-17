@@ -445,12 +445,12 @@ export default function SeedDetailContent({ slug }: { slug: string }) {
             ))}
           </div>
 
-          <div className="rounded-2xl bg-pr_w p-6 text-pr_dg flex h-full flex-col">
+          <div className="rounded-2xl bg-pr_w p-6 text-pr_dg self-start">
             <h2 className="text-sm font-semibold">Genetic Balance</h2>
             <p className="mt-2 text-xs text-pr_dg/70 whitespace-pre-line">
               {stripMarkdownArtifacts(geneticDescription)}
             </p>
-            <div className="mt-auto pt-4 space-y-3 text-xs">
+            <div className="mt-4 space-y-3 text-xs">
               <div>
                 <div className="flex justify-between">
                   <span>Indica</span>
