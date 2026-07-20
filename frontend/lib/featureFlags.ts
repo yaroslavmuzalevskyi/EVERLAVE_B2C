@@ -3,4 +3,4 @@
 
 // Blog: home-page section, header tab, and public /blog routes.
 // Set to true to bring the blog back.
-export const BLOG_ENABLED = false;
+export const BLOG_ENABLED = true;
