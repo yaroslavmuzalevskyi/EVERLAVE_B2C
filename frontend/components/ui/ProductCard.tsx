@@ -42,6 +42,14 @@ export default function ProductCard({
   const hasHoverInfo = Boolean(hoverInfo?.length);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // The info panel is shown on hover (pointer devices) or after tapping (touch).
+  // Driving the backdrop blur off this boolean via an inline style — instead of
+  // toggling Tailwind's var-based `backdrop-blur-*` classes — lets `backdrop-filter`
+  // interpolate smoothly in BOTH directions. The class-based approach snapped on
+  // exit because the value is composed from an unregistered CSS variable.
+  const panelActive = hasHoverInfo && ((isHovered && !isTouchDevice) || isPreviewOpen);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(hover: none), (pointer: coarse)");
@@ -113,13 +121,15 @@ export default function ProductCard({
                 )}
               >
                 <div
-                  className={cn(
-                    "rounded-xl border border-white/20 bg-pr_dg/65 p-3",
-                    "backdrop-blur-0 transition-[backdrop-filter,-webkit-backdrop-filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                    "will-change-[backdrop-filter]",
-                    !isTouchDevice && "group-hover:backdrop-blur-sm",
-                    isPreviewOpen && "backdrop-blur-sm",
-                  )}
+                  className="rounded-xl border border-white/20 bg-pr_dg/65 p-3"
+                  style={{
+                    backdropFilter: panelActive ? "blur(2px)" : "blur(0px)",
+                    WebkitBackdropFilter: panelActive
+                      ? "blur(2px)"
+                      : "blur(0px)",
+                    transition:
+                      "backdrop-filter 500ms cubic-bezier(0.22,1,0.36,1), -webkit-backdrop-filter 500ms cubic-bezier(0.22,1,0.36,1)",
+                  }}
                 >
                   <div className="flex flex-col gap-1">
                     {hoverInfo!.map((item, index) => (
@@ -148,7 +158,11 @@ export default function ProductCard({
   );
 
   return (
-    <div className="group flex h-full flex-col">
+    <div
+      className="group flex h-full flex-col"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {resolvedHref ? (
         <Link
           href={resolvedHref}

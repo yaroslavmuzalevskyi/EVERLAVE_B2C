@@ -26,6 +26,7 @@ import {
 import { formatPrice } from "@/services/products";
 import { useAuth } from "@/components/auth/AuthProvider";
 import OpenPaymentModal from "@/components/orders/OpenPaymentModal";
+import { BITCOIN_ENABLED } from "@/lib/featureFlags";
 
 type CartState = Awaited<ReturnType<typeof fetchCart>>;
 
@@ -113,7 +114,7 @@ const selectClass =
 export default function CartPage() {
   const disableAuth = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitializing } = useAuth();
   const [cart, setCart] = useState<CartState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -483,6 +484,27 @@ export default function CartPage() {
                 </div>
               ) : null}
 
+              {!disableAuth && isInitializing ? (
+                <div className="mt-6 border-t border-pr_dg/10 pt-5">
+                  <p className="text-sm text-pr_dg/60">Loading…</p>
+                </div>
+              ) : !disableAuth && !isAuthenticated ? (
+                <div className="mt-6 border-t border-pr_dg/10 pt-5">
+                  <p className="text-sm font-semibold">Sign in to check out</p>
+                  <p className="mt-2 text-xs text-pr_dg/60">
+                    Please sign in to enter your delivery and payment details.
+                    Your cart is saved and waiting for you.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/signin?next=%2Fcart")}
+                    className="mt-4 w-full rounded-full bg-pr_dg px-4 py-2 text-sm font-semibold text-pr_w"
+                  >
+                    Sign in to continue
+                  </button>
+                </div>
+              ) : (
+                <>
               <div className="mt-6 border-t border-pr_dg/10 pt-5">
                 <p className="text-sm font-semibold">Delivery address</p>
                 <div className="mt-3 space-y-3 text-xs">
@@ -639,11 +661,17 @@ export default function CartPage() {
                         title: "Bank transfer",
                         hint: "Pay by SEPA transfer and upload proof of payment",
                       },
-                      {
-                        value: PAYMENT_METHOD_BITCOIN,
-                        title: "Bitcoin",
-                        hint: "Pay the exact BTC amount to a one-time address",
-                      },
+                      // Bitcoin is kept in the codebase but hidden behind a flag
+                      // (see lib/featureFlags.ts) — flip BITCOIN_ENABLED to show it.
+                      ...(BITCOIN_ENABLED
+                        ? ([
+                            {
+                              value: PAYMENT_METHOD_BITCOIN,
+                              title: "Bitcoin",
+                              hint: "Pay the exact BTC amount to a one-time address",
+                            },
+                          ] as const)
+                        : []),
                     ] as const
                   ).map((option) => {
                     const checked = paymentMethod === option.value;
@@ -686,12 +714,6 @@ export default function CartPage() {
                 </p>
               ) : null}
 
-              {!isAuthenticated && !disableAuth ? (
-                <p className="mt-3 text-xs text-pr_dg/70">
-                  Sign in to complete checkout.
-                </p>
-              ) : null}
-
               <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-xs text-pr_dg/80">
                 <input
                   type="checkbox"
@@ -721,12 +743,10 @@ export default function CartPage() {
                 disabled={checkoutLoading}
                 className="mt-5 w-full rounded-full bg-pr_dg px-4 py-2 text-sm font-semibold text-pr_w disabled:opacity-60"
               >
-                {checkoutLoading
-                  ? "Processing..."
-                  : !isAuthenticated && !disableAuth
-                    ? "Sign in to checkout"
-                    : "Proceed to checkout"}
+                {checkoutLoading ? "Processing..." : "Proceed to checkout"}
               </button>
+                </>
+              )}
             </div>
           </div>
         )}

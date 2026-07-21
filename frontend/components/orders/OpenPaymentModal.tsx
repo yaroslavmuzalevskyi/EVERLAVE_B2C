@@ -18,7 +18,7 @@ type OpenPaymentModalProps = {
  * PaymentModal (the existing default).
  */
 export default function OpenPaymentModal(props: OpenPaymentModalProps) {
-  if (props.payment?.payment.method === PAYMENT_METHOD_BITCOIN) {
+  if (props.payment?.payment?.method === PAYMENT_METHOD_BITCOIN) {
     return <BitcoinPaymentModal {...props} />;
   }
   return <PaymentModal {...props} />;

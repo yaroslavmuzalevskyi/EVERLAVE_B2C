@@ -43,6 +43,7 @@ export default function PaymentModal({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -58,6 +59,7 @@ export default function PaymentModal({
     if (!isOpen) return;
     setFile(null);
     setFileError("");
+    setIsDragging(false);
     setUploading(false);
     setUploadError("");
     setSubmitted(false);
@@ -114,6 +116,30 @@ export default function PaymentModal({
     }
     setFileError("");
     setFile(selected);
+  };
+
+  const clearFile = () => {
+    setFile(null);
+    setFileError("");
+    setUploadError("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    if (uploading) return;
+    handleFileChange(event.dataTransfer.files?.[0] ?? null);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    if (!uploading) setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
   };
 
   const handleConfirm = async () => {
@@ -326,29 +352,57 @@ export default function PaymentModal({
             />
 
             {file ? (
-              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-pr_dg/5 px-4 py-3">
+              <div
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                className={`mt-3 flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition ${
+                  isDragging
+                    ? "border-pr_dg bg-pr_dg/10"
+                    : "border-transparent bg-pr_dg/5"
+                }`}
+              >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{file.name}</p>
                   <p className="text-xs text-pr_dg/60">
                     {formatBytes(file.size)}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="shrink-0 rounded-full border border-pr_dg/30 px-3 py-1 text-xs disabled:opacity-60"
-                >
-                  Replace
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="rounded-full border border-pr_dg/30 px-3 py-1 text-xs disabled:opacity-60"
+                  >
+                    Replace
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearFile}
+                    disabled={uploading}
+                    className="rounded-full border border-pr_dr/40 px-3 py-1 text-xs text-pr_dr disabled:opacity-60"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="mt-3 w-full rounded-xl border border-dashed border-pr_dg/40 px-4 py-6 text-sm text-pr_dg/70 hover:border-pr_dg/70"
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                className={`mt-3 w-full rounded-xl border border-dashed px-4 py-6 text-sm transition ${
+                  isDragging
+                    ? "border-pr_dg bg-pr_dg/5 text-pr_dg"
+                    : "border-pr_dg/40 text-pr_dg/70 hover:border-pr_dg/70"
+                }`}
               >
-                Choose a file...
+                {isDragging
+                  ? "Drop your file here"
+                  : "Drag & drop your proof here, or click to choose a file"}
               </button>
             )}
 
