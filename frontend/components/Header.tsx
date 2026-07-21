@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { usePathname } from "next/navigation";
 import { BLOG_ENABLED } from "@/lib/featureFlags";
+import { fetchCart, CART_CHANGED_EVENT } from "@/services/cart";
 
 const BUSINESS_URL = "https://b2b.evervale.org/";
 
@@ -26,10 +27,54 @@ const tabs: SectionTab[] = [
   },
 ];
 
+/**
+ * Overlays for the cart icon: a transient "+" that pulses in on add, and a
+ * persistent red count badge showing how many products are in the cart. Only
+ * one shows at a time — the "+" during the ~1s pulse, the count otherwise.
+ */
+const CartBadges = ({
+  pulse,
+  count,
+  className,
+}: {
+  pulse: boolean;
+  count: number;
+  className?: string;
+}) => {
+  const showCount = count > 0 && !pulse;
+  return (
+    <>
+      <span
+        className={cn(
+          "pointer-events-none absolute inline-flex h-4 w-4 items-center justify-center rounded-full bg-pr_dg text-[10px] font-bold text-pr_w transition-all duration-300",
+          className,
+          pulse
+            ? "translate-y-0 scale-100 opacity-100"
+            : "translate-y-1 scale-75 opacity-0",
+        )}
+        aria-hidden
+      >
+        +
+      </span>
+      <span
+        className={cn(
+          "pointer-events-none absolute inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm transition-all duration-300",
+          className,
+          showCount ? "scale-100 opacity-100" : "scale-75 opacity-0",
+        )}
+        aria-hidden
+      >
+        {count > 99 ? "99+" : count}
+      </span>
+    </>
+  );
+};
+
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuMounted, setMobileMenuMounted] = useState(false);
   const [cartPulse, setCartPulse] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
   const pathname = usePathname();
   const { isAuthenticated, isAdmin } = useAuth();
 
@@ -53,6 +98,28 @@ const Header = () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, []);
+
+  // Keep the cart count badge in sync. Refreshes on mount, on any cart
+  // mutation (CART_CHANGED_EVENT), on route changes, and when auth state
+  // flips (login merges the guest cart into the account cart).
+  useEffect(() => {
+    let cancelled = false;
+    const refreshCount = async () => {
+      try {
+        const cart = await fetchCart();
+        if (!cancelled) setCartCount(cart.items.length);
+      } catch {
+        // Ignore transient failures — keep the last known count.
+      }
+    };
+
+    refreshCount();
+    window.addEventListener(CART_CHANGED_EVENT, refreshCount);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(CART_CHANGED_EVENT, refreshCount);
+    };
+  }, [pathname, isAuthenticated]);
 
   const activeId = useMemo(() => {
     if (pathname === "/") return "home";
@@ -96,17 +163,11 @@ const Header = () => {
                 )}
                 aria-label="Open cart"
               >
-                <span
-                  className={cn(
-                    "pointer-events-none absolute right-1.5 top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-pr_dg text-[10px] font-bold text-pr_w transition-all duration-300",
-                    cartPulse
-                      ? "translate-y-0 scale-100 opacity-100"
-                      : "translate-y-1 scale-75 opacity-0",
-                  )}
-                  aria-hidden
-                >
-                  +
-                </span>
+                <CartBadges
+                  pulse={cartPulse}
+                  count={cartCount}
+                  className="right-1.5 top-1"
+                />
                 <ShoppingCart className="h-4 w-4" />
               </Link>
               <Link
@@ -197,17 +258,11 @@ const Header = () => {
                     aria-label="Open cart"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <span
-                      className={cn(
-                        "pointer-events-none absolute right-2 top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-pr_dg text-[10px] font-bold text-pr_w transition-all duration-300",
-                        cartPulse
-                          ? "translate-y-0 scale-100 opacity-100"
-                          : "translate-y-1 scale-75 opacity-0",
-                      )}
-                      aria-hidden
-                    >
-                      +
-                    </span>
+                    <CartBadges
+                      pulse={cartPulse}
+                      count={cartCount}
+                      className="right-2 top-1"
+                    />
                     <ShoppingCart className="h-4 w-4" />
                   </Link>
                   <Link

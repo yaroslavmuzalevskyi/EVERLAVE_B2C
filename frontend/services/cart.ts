@@ -50,6 +50,20 @@ type AnyRecord = Record<string, unknown>;
 const GUEST_CART_STORAGE_KEY = "evervale_guest_cart_v1";
 let guestCartSyncPromise: Promise<void> | null = null;
 
+/**
+ * Fired on any cart mutation (add / update / remove / clear) so UI that shows
+ * a cart summary — e.g. the header count badge — can refresh itself. The
+ * separate "cart-item-added" event is still emitted by add callers to drive
+ * the add-to-cart pulse animation.
+ */
+export const CART_CHANGED_EVENT = "cart-changed";
+
+function notifyCartChanged() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(CART_CHANGED_EVENT));
+  }
+}
+
 function buildApiError(
   fallbackMessage: string,
   status: number,
@@ -489,6 +503,7 @@ export async function addCartItem(
   }
 
   await postCartItem(normalizedProductSlug, normalizedQty, normalizedPackId);
+  notifyCartChanged();
   return { success: true };
 }
 
@@ -511,6 +526,7 @@ export async function updateCartItem(itemId: string, qty: number) {
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to update item", response.status, error);
   }
+  notifyCartChanged();
   return response.json() as Promise<{ success: boolean }>;
 }
 
@@ -529,6 +545,7 @@ export async function removeCartItem(itemId: string) {
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to remove item", response.status, error);
   }
+  notifyCartChanged();
   return response.json() as Promise<{ success: boolean }>;
 }
 
@@ -538,5 +555,6 @@ export async function clearCart() {
     const error = await response.json().catch(() => ({}));
     throw buildApiError("Failed to clear cart", response.status, error);
   }
+  notifyCartChanged();
   return response.json() as Promise<{ success: boolean }>;
 }
