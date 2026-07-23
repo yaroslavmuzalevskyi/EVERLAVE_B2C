@@ -17,7 +17,7 @@ const cards: ProofCard[] = [
     icon: <List className="h-8 w-8 text-sr_dg" />,
   },
   {
-    title: "400+ KG",
+    title: "400 000+",
     description: "Seeds Sold Per Month",
     icon: <ShoppingCart className="h-8 w-8 text-sr_dg" />,
   },
